@@ -1,0 +1,12 @@
+__pycache__/
+extra_assistants.py
+pages_dev/
+pages_/
+dump/
+chats/*
+templates/*
+pages_dev.zip
+chat_log.json
+api_keys.json
+mychatbot_v1.zip
+pages/chats/*
