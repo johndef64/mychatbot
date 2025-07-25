@@ -231,6 +231,7 @@ groq_models = [
     "deepseek-r1-distill-llama-70b",
     "meta-llama/llama-4-maverick-17b-128e-instruct",
     "meta-llama/llama-4-scout-17b-16e-instruct",
+    "moonshotai/kimi-k2-instruct",
     "mistral-saba-24b",
     "playai-tts",
     "playai-tts-arabic",
@@ -272,10 +273,120 @@ TTS HD	$0.030 / 1K characters
 '''
 
 
+##### Parameters ######
+
+# General parameters
+api_models = ['gpt-4o-mini', 'gpt-4o',
+              "gpt-4.1",  "gpt-4.1-mini", "gpt-4.1-nano",
+              # "o1-mini",
+              "deepseek-chat", "deepseek-reasoner",
+              "grok-2-latest",
+              "grok-3",
+              "grok-4",
+
+              "gemma2-9b-it",
+              #"llama-3.3-70b-versatile",
+              #"llama-3.1-8b-instant",
+              #"llama-guard-3-8b",
+              "llama3-70b-8192",
+              "llama-3.3-70b-versatile",
+              #"llama3-8b-8192",
+              #"allam-2-7b",
+              "deepseek-r1-distill-llama-70b",
+              "meta-llama/llama-4-maverick-17b-128e-instruct",
+              "meta-llama/llama-4-scout-17b-16e-instruct",
+              "moonshotai/kimi-k2-instruct",
+              "mistral-saba-24b",
+              #"playai-tts",
+              "qwen-qwq-32b",
+              #"compound-beta",
+              #"compound-beta-mini"
+
+              "claude-opus-4-0", 
+              "claude-sonnet-4-0", 
+              "claude-3-7-sonnet-latest",
+              "claude-3-5-sonnet-latest",
+              "claude-3-5-haiku-latest", 
+              "claude-3-opus-latest", 
+              
+              ]
+
+def get_max_tokens(model):
+    if model in ["claude-3-5-haiku-latest", "claude-3-5-sonnet-latest",
+                "gemma2-9b-it",  "llama-3.1-8b-instant",  "llama-guard-3-8b",   "llama3-70b-8192",    "llama3-8b-8192",
+                "meta-llama/llama-4-maverick-17b-128e-instruct",
+                "meta-llama/llama-4-scout-17b-16e-instruct",
+                "mistral-saba-24b",]:
+    
+        return 8192
+    elif model in ["qwen-qwq-32b", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", 
+                    "o1-mini", "gpt-4o-mini", "gpt-4o"]:
+        return 32000
+    elif model in ["deepseek-chat", "deepseek-reasoner",
+                    "llama-3.3-70b-versatile","deepseek-r1-distill-llama-70b", 
+                    "grok-2-latest", "grok-3","grok-4",]:
+        return 20000
+    elif model in ["claude-opus-4-0", "claude-sonnet-4-0", "claude-3-7-sonnet-latest",]:
+        return 20000
+    elif model in ["moonshotai/kimi-k2-instruct"]:
+        return 16300
+    else:
+        return 8192
+
+# claude_models = [
+#     ("claude-opus-4-0", "claude-opus-4-20250514"),
+#     ("claude-sonnet-4-0", "claude-sonnet-4-20250514"),
+#     ("claude-3-7-sonnet-latest", "claude-3-7-sonnet-20250219"),
+#     ("claude-3-5-sonnet-latest", "claude-3-5-sonnet-20241022"),
+#     ("claude-3-5-haiku-latest", "claude-3-5-haiku-20241022"),
+#     ("claude-3-opus-latest", "claude-3-opus-20240229")
+# ]
+
+
+
+# Output: modified_string => "This is a string with tags."
+#         extracted_parts => ["sample", "thought"]
+
+
+# assistant_list = list(assistants.keys())
+assistant_list = [
+    'none', 'base', 'creator', 'fixer', 'novelist', 'delamain',  'oracle', 'snake', 'roger', #'robert',
+    'leonardo', 'galileo', 'newton',
+    'mendel', 'watson', 'crick', 'venter',
+    'collins', 'elsevier', 'springer',
+    'darwin', 'dawkins',
+    'penrose', 'turing', 'marker',
+    'mike', 'michael', 'julia', 'jane', 'yoko', 'asuka', 'misa', 'hero', 'xiao', 'peng', 'miguel', 'francois', 'luca',
+    'english', 'spanish', 'french', 'italian', 'portuguese', 'korean', 'chinese', 'japanese', 'japanese_teacher', 'portuguese_teacher'
+]
 
 
 
 
+voice_dict = {
+    'none':'echo','luca':'onyx',
+    'hero':'echo', 'peng':'echo',
+    'yoko':'nova', 'xiao':'nova',
+    'miguel':'echo', 'francois':'onyx', 'michael':'onyx',
+    'julia':'shimmer', 'mike':'onyx',
+    'penrose':'onyx', 'leonardo':'onyx', 'mendel':'onyx', 'darwin':'onyx','delamain':'onyx'
+}
+
+avatar_dict = {
+    'none':"🤖",
+    'base':"🤖",
+    'hero':"👦🏻", 'yoko':"👧🏻", 'peng':"👦🏻", 'xiao':"👧🏻",
+    'miguel':"🧑🏼", 'francois':"🧑🏻",
+    'luca':"🧔🏻", 'michael':"🧔🏻",
+    'julia':"👱🏻‍♀️", 'mike':"👱🏻‍♂️",
+    'penrose':"👨🏻‍🏫", 'leonardo':"👨🏻‍🔬", 'mendel':"👨🏻‍⚕️",
+    'darwin':"👴🏻", 'dawkins':"👴🏻",
+    'delamain':"👨🏻‍💻",'snake':"👨🏻‍💻",'roger':"👨🏻‍💻",
+    'alfred':"🤵🏻",
+    'laura':"👩🏻",
+    'otaku_sensei':"👨🏻",
+    "chiyo_yamada": "👧🏻",
+}
 
 
 

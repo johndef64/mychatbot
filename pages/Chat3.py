@@ -2,7 +2,8 @@
 import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import os, sys, contextlib, re
+import os, sys, contextlib, re, socket
+import pickle
 from openai import OpenAI
 import streamlit as st
 import base64
@@ -24,8 +25,6 @@ model_name     = f"model_{chat_num}"
 reply          = f"reply_{chat_num}"
 
 
-import os
-import pickle
 
 def generate_chat_name(path, assistant_name):
     # Counter starts at 1
@@ -80,68 +79,6 @@ def export_chat_as_markdown():
     return markdown_content
 
 #%%
-# General parameters
-api_models = ['gpt-4o-mini', 'gpt-4o',
-              "gpt-4.1",  "gpt-4.1-mini", "gpt-4.1-nano",
-              # "o1-mini",
-              "deepseek-chat", "deepseek-reasoner",
-              "grok-2-latest",
-              "grok-3",
-              "grok-4",
-
-              "gemma2-9b-it",
-              #"llama-3.3-70b-versatile",
-              #"llama-3.1-8b-instant",
-              #"llama-guard-3-8b",
-              #"llama3-70b-8192",
-              #"llama3-8b-8192",
-              #"allam-2-7b",
-              "deepseek-r1-distill-llama-70b",
-              "meta-llama/llama-4-maverick-17b-128e-instruct",
-              "meta-llama/llama-4-scout-17b-16e-instruct",
-              "mistral-saba-24b",
-              #"playai-tts",
-              "qwen-qwq-32b",
-              #"compound-beta",
-              #"compound-beta-mini"
-
-              "claude-opus-4-0", 
-              "claude-sonnet-4-0", 
-              "claude-3-7-sonnet-latest",
-              "claude-3-5-sonnet-latest",
-              "claude-3-5-haiku-latest", 
-              "claude-3-opus-latest", 
-              
-              ]
-
-def get_max_tokens(model):
-    if model in ["claude-3-5-haiku-latest", "claude-3-5-sonnet-latest",
-                    "gemma2-9b-it",  "llama-3.1-8b-instant",  "llama-guard-3-8b",   "llama3-70b-8192",    "llama3-8b-8192",
-                    "meta-llama/llama-4-maverick-17b-128e-instruct",
-                "meta-llama/llama-4-scout-17b-16e-instruct",
-                    "mistral-saba-24b",]:
-    
-        return 8192
-    elif model in ["qwen-qwq-32b", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", 
-                    "o1-mini", "gpt-4o-mini", "gpt-4o"]:
-        return 32000
-    elif model in ["deepseek-chat", "deepseek-reasoner",
-                    "llama-3.3-70b-versatile","deepseek-r1-distill-llama-70b", 
-                    "grok-2-latest", "grok-3","grok-4",]:
-        return 20000
-    elif model in ["claude-opus-4-0", "claude-sonnet-4-0", "claude-3-7-sonnet-latest",]:
-        return 20000
-    else:
-        return 8192
-
-# claude_models = [
-#     ("claude-opus-4-0", "claude-opus-4-20250514"),
-#     ("claude-sonnet-4-0", "claude-sonnet-4-20250514"),
-#     ("claude-3-7-sonnet-latest", "claude-3-7-sonnet-20250219"),
-#     ("claude-3-5-sonnet-latest", "claude-3-5-sonnet-20241022"),
-#     ("claude-3-5-haiku-latest", "claude-3-5-haiku-20241022"),
-#     ("claude-3-opus-latest", "claude-3-opus-20240229")
-# ]
 
 
 # Function to be executed on button click
@@ -171,36 +108,7 @@ def remove_last_non_system(input_list):
 
 
 
-
-
-# Output: modified_string => "This is a string with tags."
-#         extracted_parts => ["sample", "thought"]
-
-
-# assistant_list = list(assistants.keys())
-assistant_list = [
-    'none', 'base', 'creator', 'fixer', 'novelist', 'delamain',  'oracle', 'snake', 'roger', #'robert',
-    'leonardo', 'galileo', 'newton',
-    'mendel', 'watson', 'crick', 'venter',
-    'collins', 'elsevier', 'springer',
-    'darwin', 'dawkins',
-    'penrose', 'turing', 'marker',
-    'mike', 'michael', 'julia', 'jane', 'yoko', 'asuka', 'misa', 'hero', 'xiao', 'peng', 'miguel', 'francois', 'luca',
-    'english', 'spanish', 'french', 'italian', 'portuguese', 'korean', 'chinese', 'japanese', 'japanese_teacher', 'portuguese_teacher'
-]
-
-# Try to import 'extra' from 'extra_assistant' if it's available
-try:
-    from extra_assistants import extra
-except ImportError:
-    # If the import fails, initialize 'extra' as an empty dictionary
-    extra = {}
-# Add values from 'extra' to 'assistants'
-assistants.update(extra)
-# Add keys from 'extra' to 'assistant_list'
-assistant_list.extend(extra.keys())
-
-
+# Check if session state exists, if not, initialize it
 if assistant_name not in ss:
     ss[assistant_name] = 'none'
 
@@ -214,6 +122,20 @@ if "assistant" not in ss:
 # Build assistant
 ss['assistant'] = assistants[ss[assistant_name]] + features['reply_style'][ss[format_name]]
 
+
+# Try to import 'extra' from 'extra_assistant' if it's available
+try:
+    from extra_assistants import extra
+except ImportError:
+    # If the import fails, initialize 'extra' as an empty dictionary
+    extra = {}
+# Add values from 'extra' to 'assistants'
+assistants.update(extra)
+# Add keys from 'extra' to 'assistant_list'
+assistant_list.extend(extra.keys())
+
+
+
 # Initialize Chat Thread
 if chat_n not in ss:
     #ss[chat_n] = [{"role": "assistant", "content": "How can I help you?"}]
@@ -223,7 +145,7 @@ if sys_addings not in ss:
     ss[sys_addings] = []
 
 if model_name not in ss:
-    ss[model_name] = "deepseek-r1-distill-llama-70b" #"gpt-4o-mini"
+    ss[model_name] = "moonshotai/kimi-k2-instruct" #"deepseek-r1-distill-llama-70b" #"gpt-4o-mini"
 
 if reply not in ss:
     ss[reply] = ""
@@ -259,7 +181,41 @@ else:
     ss.groq_api_key    = None
     ss.anthropic_api_key = None
 
-print("App Ready!")
+# Function to get local IP address
+def get_local_ip():
+    try:
+        # Connect to a remote server to determine the local IP
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("8.8.8.8", 80))
+            local_ip = s.getsockname()[0]
+        return local_ip
+    except Exception:
+        # Fallback to localhost if unable to determine IP
+        return "localhost"
+
+# Get the actual IP address
+local_ip = get_local_ip()
+streaming_url = f"http://{local_ip}:8501"
+
+# Retro terminal print for the chatbot - only on first run
+if 'app_initialized' not in ss:
+    print("\n" + "#"*62)
+    print("##" + " "*58 + "##")
+    print("##      MYCHATBOT PRO - MULTI-AI ASSISTANT v1.0           ##")
+    print("##" + " "*58 + "##")
+    print("#"*62)
+    print("|| STATUS: ONLINE")
+    print(f"|| STREAMING: {streaming_url}")
+    print("|| MODELS: OpenAI | DeepSeek | Grok | Groq | Anthropic")
+    print("|| READY: Advanced AI capabilities loaded")
+    print("-"*62)
+    print("SERVER RUNNING... Access your chatbot via URL above")
+    print("-"*62 + "\n")
+    print(">>> App Ready!")
+    
+    # Mark app as initialized
+    ss['app_initialized'] = True
+
 
 # <<<<<<<<<<<<Sidebar code>>>>>>>>>>>>>
 with st.sidebar:
@@ -399,7 +355,7 @@ with st.sidebar:
     
     st.markdown("🔗 **Useful Links:**")
     st.markdown("- [Get OpenAI API key](https://platform.openai.com/account/api-keys)")
-    st.markdown("- [View source code](https://github.com/johndef64/mychatgpt/tree/main/mychatbot)")
+    st.markdown("- [View source code](https://github.com/johndef64/mychatbot)")
 
 ############################################################################################
 ############################################################################################
@@ -453,6 +409,7 @@ if uploaded_file:
 # ss["format_name"] = get_format
 
 
+# <<<<<<<<<<<<Display header>>>>>>>>>>>>>
 
 st.title("🤖 MyChatbot Pro")
 st.caption("🚀 Multi-AI Assistant powered by OpenAI, DeepSeek, Grok, Groq & Anthropic")
@@ -580,30 +537,6 @@ else:
 #if ss.persona not in ss[chat_n]:
 #    ss[chat_n] = update_assistant(ss[chat_n])
 
-voice_dict = {
-    'none':'echo','luca':'onyx',
-    'hero':'echo', 'peng':'echo',
-    'yoko':'nova', 'xiao':'nova',
-    'miguel':'echo', 'francois':'onyx', 'michael':'onyx',
-    'julia':'shimmer', 'mike':'onyx',
-    'penrose':'onyx', 'leonardo':'onyx', 'mendel':'onyx', 'darwin':'onyx','delamain':'onyx'
-}
-
-avatar_dict = {
-    'none':"🤖",
-    'base':"🤖",
-    'hero':"👦🏻", 'yoko':"👧🏻", 'peng':"👦🏻", 'xiao':"👧🏻",
-    'miguel':"🧑🏼", 'francois':"🧑🏻",
-    'luca':"🧔🏻", 'michael':"🧔🏻",
-    'julia':"👱🏻‍♀️", 'mike':"👱🏻‍♂️",
-    'penrose':"👨🏻‍🏫", 'leonardo':"👨🏻‍🔬", 'mendel':"👨🏻‍⚕️",
-    'darwin':"👴🏻", 'dawkins':"👴🏻",
-    'delamain':"👨🏻‍💻",'snake':"👨🏻‍💻",'roger':"👨🏻‍💻",
-    'alfred':"🤵🏻",
-    'laura':"👩🏻",
-    'otaku_sensei':"👨🏻",
-    "chiyo_yamada": "👧🏻",
-}
 voice = voice_dict.get(get_assistant, "echo")
 chatbot_avi = avatar_dict.get(get_assistant, "🤖")
 

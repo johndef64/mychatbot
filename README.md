@@ -1,4 +1,4 @@
-# 🤖 MyChatbot Pro - Multi-AI Assistant
+# 🤖 MyChatbot Pro v1.0 - Multi-AI Assistant
 
 A powerful Streamlit-based chatbot application with support for multiple AI providers and specialized assistants.
 
