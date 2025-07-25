@@ -458,7 +458,7 @@ for key, value in model_status_map.items():
 
 col1, col2, col3 = st.columns([2,1,1])
 with col1:
-    st.markdown(f"**Current Model:** `{model}` ({model_provider})")
+    st.markdown(f"**Current Model:** `{model}`") #({model_provider})
 with col2:
     st.markdown(f"**Assistant:** `{get_assistant}`")
 with col3:
