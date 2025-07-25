@@ -271,7 +271,7 @@ with st.sidebar:
     
     col1, col2 = st.columns(2)
     play_audio_ = col1.checkbox('🔊 Audio', value=False)
-    copy_reply_ = col2.checkbox('📋 Copy', value=True)
+    copy_reply_ = col2.checkbox('📋 Copy', value=False)
     run_code = col1.checkbox('⚡ Run Code', value=False)
     # if col2.button("Copy Reply"):
     #     pc.copy(ss[reply])
