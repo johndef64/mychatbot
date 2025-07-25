@@ -315,7 +315,7 @@ with st.sidebar:
     col12, col22 = st.columns(2)
     if col12.button("🗑️ Clear chat"):
         clearchat()
-    if col22.button("🧹 Clear system"):
+    if col22.button("🧹 Clear sys"):
         clearsys()
     
     user_avi = st.selectbox('👤 Your Avatar', ['🧑🏻', '🧔🏻', '👩🏻', '👧🏻', '👸🏻','👱🏻‍♂️','🧑🏼','👸🏼','🧒🏽','👳🏽','👴🏼', '🎅🏻', ])
@@ -325,12 +325,12 @@ with st.sidebar:
     col_save, col_export = st.columns(2)
     
     with col_save:
-        if st.button("💾 Save Chat"):
+        if st.button("💾 Save"):
             chat_name = save_chat_as_pickle()
             st.success(f"✅ Chat saved as {chat_name}!")
     
     with col_export:
-        if st.button("📄 Export MD"):
+        if st.button("📤 Export"):
             markdown_export = export_chat_as_markdown()
             st.download_button(
                 label="⬇️ Download",
@@ -338,6 +338,18 @@ with st.sidebar:
                 file_name=f"chat_export_{get_assistant}_{time.strftime('%Y%m%d_%H%M%S')}.md",
                 mime="text/markdown"
             )
+
+    # Add a button to export chat
+    # st.caption("📤 Export Chat")
+    # if st.button("📤 Export Chat"):
+    #     markdown = export_chat_as_markdown()
+    #     # Create a download link for the user
+    #     st.download_button(
+    #         label="Download Markdown",
+    #         data=markdown,
+    #         file_name="chat_export.md",
+    #         mime="text/markdown",
+    #     )
 
     # List files in the 'chats/' directory
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'chats'))
@@ -809,16 +821,6 @@ def export_chat_as_markdown():
     
     return markdown_content
 
-# Add a button to export chat
-# st.caption("📤 Export Chat")
-if st.button("📤 Export Chat"):
-    markdown = export_chat_as_markdown()
-    # Create a download link for the user
-    st.download_button(
-        label="Download Markdown",
-        data=markdown,
-        file_name="chat_export.md",
-        mime="text/markdown",
-    )
+
 
 
