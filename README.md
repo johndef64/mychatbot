@@ -5,15 +5,14 @@ A powerful Streamlit-based chatbot application with support for multiple AI prov
 ## ✨ Features
 
 ### 🤖 Multi-AI Provider Support
-- **OpenAI**: GPT-4o, GPT-4o-mini
+- **OpenAI**: GPT-4.1, GPT-4.1-mini
 - **DeepSeek**: Advanced reasoning models
 - **xAI**: Grok-2, Grok-3, Grok-4
 - **Anthropic**: Claude Sonnet, Opus, Haiku
-- **Groq**: High-speed inference
-- **Meta**: Llama models
+- **Groq**: High-speed inference,  Llama-4 models
 
 ### 👥 Specialized Assistants
-- **💻 Copilots**: Base, Novelist, Creator, Fixer, Delamain, Oracle, Snake, Roger
+- **💻 Copilots**: Base, Novelist, Creator, Fixer, Delamain, Oracle, Snake (Python), Roger (R)
 - **🔬 Scientific**: Leonardo, Newton, Galileo, Mendel, Watson, Venter, Crick, Darwin, Dawkins, Penrose, Turing
 - **🎭 Characters**: Julia, Mike, Michael, Miguel, Francois, Luca, Hero, Yoko, Xiao, Peng
 - **🌐 Language Teachers**: Multi-language support with specialized tutors
@@ -47,7 +46,7 @@ A powerful Streamlit-based chatbot application with support for multiple AI prov
 ```bash
 # Clone the repository
 git clone https://github.com/johndef64/mychatgpt.git
-cd mychatgpt/mychatbot
+cd mychatbot
 
 # Install dependencies
 pip install -r requirements.txt
