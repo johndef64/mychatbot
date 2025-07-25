@@ -115,9 +115,20 @@ if format_name not in ss:
 if "assistant" not in ss:
     ss['assistant'] = assistants[ss[assistant_name]]
 
-# Build assistant
-ss['assistant'] = assistants[ss[assistant_name]] + features['reply_style'][ss[format_name]]
+# Build assistant - this will be updated after user selection in sidebar
 
+
+# assistant_list = list(assistants.keys())
+assistant_list = [
+    'none', 'base', 'creator', 'fixer', 'novelist', 'delamain',  'oracle', 'snake', 'roger', #'robert',
+    'leonardo', 'galileo', 'newton',
+    'mendel', 'watson', 'crick', 'venter',
+    'collins', 'elsevier', 'springer',
+    'darwin', 'dawkins',
+    'penrose', 'turing', 'marker',
+    'mike', 'michael', 'julia', 'jane', 'yoko', 'asuka', 'misa', 'hero', 'xiao', 'peng', 'miguel', 'francois', 'luca',
+    'english', 'spanish', 'french', 'italian', 'portuguese', 'korean', 'chinese', 'japanese', 'japanese_teacher', 'portuguese_teacher'
+]
 
 # Try to import 'extra' from 'extra_assistant' if it's available
 try:
@@ -146,8 +157,7 @@ if model_name not in ss:
 if reply not in ss:
     ss[reply] = ""
 
-# Update assistant in chat thread
-ss[chat_n] = update_assistant(ss[chat_n])
+# Update assistant in chat thread will be done after sidebar selection
 
 # Immagazzina il valore corrente in session_state e imposta il valore predefinito se non esiste
 # if 'assistant_index' not in ss:
@@ -270,6 +280,12 @@ with st.sidebar:
     ss[assistant_name] = get_assistant
     ss[format_name] = get_format
     ss[model_name] = model
+    
+    # Build assistant with updated values
+    ss['assistant'] = assistants[ss[assistant_name]] + features['reply_style'][ss[format_name]]
+    
+    # Update assistant in chat thread
+    ss[chat_n] = update_assistant(ss[chat_n])
     
     st.divider()
     
@@ -407,7 +423,7 @@ if uploaded_file:
 
 # <<<<<<<<<<<<Display header>>>>>>>>>>>>>
 
-st.title("🤖 MyChatbot Pro")
+st.title("🤖 MyChatbot v1.0")
 st.caption("🚀 Multi-AI Assistant powered by OpenAI, DeepSeek, Grok, Groq & Anthropic")
 
 # Add a nice header with model info
@@ -439,8 +455,7 @@ with col3:
 st.divider()
 
 # Draft information formatted within an info box
-info = """
-#### Quick Commands:
+info = """#### Quick Commands:
 - Start message with "+" to add message without getting a reply
 - Start message with "++" to add additional system instructions
 - Enter ":" to pop out last iteration
@@ -525,8 +540,10 @@ if Info:
         """)
 else:
     # Show compact help hint
-    st.info("💡 Type `@` to clear chat, `+message` to add without reply, `++instruction` for system prompts")
-
+    if "header_info" not in ss:
+        st.info("ℹ️ **Quick Commands**: Type `+message` to add without reply, `++instruction` for system prompts, `.` to remove last message, `-` or `@` to clear chat")
+        ss.header_info = True
+# <<<<<<<<<<<< >>>>>>>>>>>>>
 
 
 # Update Language Automatically
@@ -789,8 +806,8 @@ def export_chat_as_markdown():
     return markdown_content
 
 # Add a button to export chat
-st.subheader("📤 Export Chat")
-if st.button("Export as Markdown"):
+# st.caption("📤 Export Chat")
+if st.button("📤 Export Chat"):
     markdown = export_chat_as_markdown()
     # Create a download link for the user
     st.download_button(

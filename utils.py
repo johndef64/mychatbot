@@ -348,20 +348,6 @@ def get_max_tokens(model):
 #         extracted_parts => ["sample", "thought"]
 
 
-# assistant_list = list(assistants.keys())
-assistant_list = [
-    'none', 'base', 'creator', 'fixer', 'novelist', 'delamain',  'oracle', 'snake', 'roger', #'robert',
-    'leonardo', 'galileo', 'newton',
-    'mendel', 'watson', 'crick', 'venter',
-    'collins', 'elsevier', 'springer',
-    'darwin', 'dawkins',
-    'penrose', 'turing', 'marker',
-    'mike', 'michael', 'julia', 'jane', 'yoko', 'asuka', 'misa', 'hero', 'xiao', 'peng', 'miguel', 'francois', 'luca',
-    'english', 'spanish', 'french', 'italian', 'portuguese', 'korean', 'chinese', 'japanese', 'japanese_teacher', 'portuguese_teacher'
-]
-
-
-
 
 voice_dict = {
     'none':'echo','luca':'onyx',
