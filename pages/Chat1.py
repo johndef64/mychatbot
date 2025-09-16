@@ -1,7 +1,3 @@
-# Add parent directory to sys.path to import utils and assistants
-import os, sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 import os, sys, contextlib, re, socket
 import pickle
 from openai import OpenAI
@@ -156,7 +152,7 @@ if sys_addings not in ss:
     ss[sys_addings] = []
 
 if model_name not in ss:
-    ss[model_name] = "moonshotai/kimi-k2-instruct" #"deepseek-r1-distill-llama-70b" #"gpt-4o-mini"
+    ss[model_name] = "moonshotai/kimi-k2-instruct-0905" #"deepseek-r1-distill-llama-70b" #"gpt-4o-mini"
 
 if reply not in ss:
     ss[reply] = ""

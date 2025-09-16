@@ -152,7 +152,7 @@ if sys_addings not in ss:
     ss[sys_addings] = []
 
 if model_name not in ss:
-    ss[model_name] = "moonshotai/kimi-k2-instruct" #"deepseek-r1-distill-llama-70b" #"gpt-4o-mini"
+    ss[model_name] = "moonshotai/kimi-k2-instruct-0905" #"deepseek-r1-distill-llama-70b" #"gpt-4o-mini"
 
 if reply not in ss:
     ss[reply] = ""

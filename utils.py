@@ -19,7 +19,15 @@ import ast
 import os
 import re
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
-import pygame
+try:
+    import pygame
+    pygame.mixer.init()
+    PYGAME_AVAILABLE = True
+except (ImportError, pygame.error) as e:
+    print(f"[WARNING] Pygame audio not available: {e}")
+    print("[INFO] Pygame audio functions will be disabled")
+    pygame = None
+    PYGAME_AVAILABLE = False
 import markdown
 
 
@@ -33,21 +41,31 @@ def is_package_installed(package_name):
 if platform.system() == "Linux":
     if not is_package_installed("libportaudio2"):
         try:
-            subprocess.check_call(["sudo", "apt-get", "update"])
-            subprocess.check_call(["sudo", "apt-get", "install", "libportaudio2"])
+            # First try without sudo
+            subprocess.check_call(["apt-get", "update"])
+            subprocess.check_call(["apt-get", "install", "libportaudio2"])
         except Exception as e:
-            print("[WARNING] Could not run sudo apt-get install libportaudio2. Skipping installation. Error:", e)
-            # Optionally, try conda install or just bypass
-            # try:
-            #     subprocess.check_call(["conda", "install", "-c", "conda-forge", "portaudio"])
-            # except Exception as e2:
-            #     print("[WARNING] Could not run conda install portaudio. Skipping. Error:", e2)
-            pass
+            print("[INFO] Could not install without sudo, trying with sudo...")
+            try:
+                subprocess.check_call(["sudo", "apt-get", "update"])
+                subprocess.check_call(["sudo", "apt-get", "install", "libportaudio2"])
+            except Exception as e2:
+                print("[WARNING] Could not install libportaudio2 with or without sudo. Skipping installation. Error:", e2)
+                pass
     else:
         pass
 
-import sounddevice as sd
-import soundfile as sf
+# Try to import audio libraries, fallback if not available
+try:
+    import sounddevice as sd
+    import soundfile as sf
+    AUDIO_AVAILABLE = True
+except (ImportError, OSError) as e:
+    print(f"[WARNING] Audio libraries not available: {e}")
+    print("[INFO] Audio-related functions will be disabled")
+    sd = None
+    sf = None
+    AUDIO_AVAILABLE = False
 
 # try:
 #     import PIL
@@ -920,20 +938,25 @@ def image_encoder(image_path: str = None):
         image_path = f"data:image/jpeg;base64,{base64_image}"
     return image_path
 
-pygame.mixer.init()
-
 ###### audio functions  #####
 def play_audio(file_name):
+    if not PYGAME_AVAILABLE:
+        print("[ERROR] Audio playback not available - pygame not installed or no audio device")
+        return False
     pygame.mixer.music.load(file_name)
     pygame.mixer.music.play()
     while pygame.mixer.music.get_busy():
         pygame.time.Clock().tick(10)
     pygame.mixer.music.stop()
     pygame.mixer.quit() # Close the file after music play ends
+    return True
 
 
 def play_audio_stream(audio_bytes):
     """Play audio directly from bytes using pygame"""
+    if not PYGAME_AVAILABLE:
+        print("[ERROR] Audio stream playback not available - pygame not installed or no audio device")
+        return False
     audio_buffer = io.BytesIO(audio_bytes)
     sound = pygame.mixer.Sound(audio_buffer)
     sound.play()
@@ -941,6 +964,7 @@ def play_audio_stream(audio_bytes):
     # Aspetta che il suono finisca
     while pygame.mixer.get_busy():
         pygame.time.wait(100)
+    return True
 
 # def play_audio_wave(audio_bytes):
 #     """Play audio directly from bytes without saving to file"""
@@ -965,6 +989,9 @@ def play_audio_stream(audio_bytes):
 
 
 def audio_loop(audio_file="speech.mp3", repeat='alt' , exit='shift'):
+    if not PYGAME_AVAILABLE:
+        print("[ERROR] Audio loop not available - pygame not installed or no audio device")
+        return False
     print('Press '+repeat+' to repeat aloud, '+exit+' to exit.')
     while True:
         if kb.is_pressed(repeat):
@@ -973,9 +1000,13 @@ def audio_loop(audio_file="speech.mp3", repeat='alt' , exit='shift'):
         elif kb.is_pressed(exit):
             print('Chat Closed')
             break
+    return True
 
 
 def record_audio(duration=5, filename="recorded_audio.mp3"): # duration: in seconds
+    if not AUDIO_AVAILABLE:
+        print("[ERROR] Audio recording not available - sounddevice/soundfile not installed")
+        return False
     print('start recording for',str(duration),'seconds')
     sample_rate = 44100
     channels = 2
@@ -983,6 +1014,7 @@ def record_audio(duration=5, filename="recorded_audio.mp3"): # duration: in seco
     sd.wait() # wait until recording is finished
     print('recording ended')
     sf.write(filename, recording, sample_rate) #save audio file
+    return True
 
 
 def record_audio_press(filename='recorded_audio.wav',
@@ -990,6 +1022,9 @@ def record_audio_press(filename='recorded_audio.wav',
                        rate=44100,
                        subtype='PCM_16',
                        stop= 'ctrl'):
+    if not AUDIO_AVAILABLE:
+        print("[ERROR] Audio recording not available - sounddevice/soundfile not installed")
+        return False
     # start recording with the given sample rate and channels
     print("Recording... Press "+stop+" to stop")
     myrecording = sd.rec(int(rate * 10), samplerate=rate, channels=channels)
@@ -1001,9 +1036,13 @@ def record_audio_press(filename='recorded_audio.wav',
 
     sd.wait()  # wait until recording is finished
     sf.write(filename, myrecording, rate, subtype)
+    return True
 
 
 def loop_audio(start='alt', stop='ctrl',exit='shift', filename='recorded_audio.wav', printinfo=True):
+    if not AUDIO_AVAILABLE:
+        print("[ERROR] Audio recording not available - sounddevice/soundfile not installed")
+        return False
     if printinfo: print("Press "+start+" to start recording, "+exit+" to exit")
     while True:
         # If 'Key' is pressed start the recording
@@ -1012,6 +1051,7 @@ def loop_audio(start='alt', stop='ctrl',exit='shift', filename='recorded_audio.w
             break
         elif kb.is_pressed(exit):
             break
+    return True
 
 
 def while_kb_press(start='alt',stop='ctrl'):
@@ -1184,17 +1224,22 @@ def Text2Speech(text: str = '',
     )
 
     if stream:
-        # Create a buffer using BytesIO to store the data
-        buffer = io.BytesIO()
-        # Iterate through the 'spoken_response' data in chunks of 4096 bytes and write each chunk to the buffer
-        for chunk in spoken_response.iter_bytes(chunk_size=4096):
-            buffer.write(chunk)
-        # Set the position in the buffer to the beginning (0) to be able to read from the start
-        buffer.seek(0)
-        with sf.SoundFile(buffer, 'r') as sound_file:
-            data = sound_file.read(dtype='int16')
-            sd.play(data, sound_file.samplerate)
-            sd.wait()
+        if not AUDIO_AVAILABLE:
+            print("[WARNING] Audio playback not available - falling back to save_audio only")
+            save_audio = True
+            stream = False
+        else:
+            # Create a buffer using BytesIO to store the data
+            buffer = io.BytesIO()
+            # Iterate through the 'spoken_response' data in chunks of 4096 bytes and write each chunk to the buffer
+            for chunk in spoken_response.iter_bytes(chunk_size=4096):
+                buffer.write(chunk)
+            # Set the position in the buffer to the beginning (0) to be able to read from the start
+            buffer.seek(0)
+            with sf.SoundFile(buffer, 'r') as sound_file:
+                data = sound_file.read(dtype='int16')
+                sd.play(data, sound_file.samplerate)
+                sd.wait()
 
     if save_audio:
         filename = f"{filename}.{response_format}"
@@ -1236,20 +1281,29 @@ def Chat2Speech(#prompt: str = '',
     reply = completion.choices[0].message.audio.transcript
     with open("temp.mp3", "wb") as f:
          f.write(wav_bytes)
-    audio_buffer = io.BytesIO(wav_bytes)
-    audio_data, samplerate = sf.read(audio_buffer, dtype='float32')
-    sd.play(audio_data, samplerate)
-    sd.wait()
+    
+    if AUDIO_AVAILABLE:
+        audio_buffer = io.BytesIO(wav_bytes)
+        audio_data, samplerate = sf.read(audio_buffer, dtype='float32')
+        sd.play(audio_data, samplerate)
+        sd.wait()
+    else:
+        print("[WARNING] Audio playback not available - audio saved to temp.mp3")
+    
     return reply
 
 
 def Speech2Speech(voice: str ='nova', tts: str = 'tts-1',
                   filename="speech2speech.mp3",
                   translate=False, play=True, info =True):
+    if not AUDIO_AVAILABLE:
+        print("[ERROR] Speech to Speech not available - audio libraries not installed")
+        return False
     #record_audio(duration=duration, filename="audio.mp3")
     loop_audio(start='alt', stop='ctrl', filename='temp.wav', printinfo=info)
     transcript = Whisper('temp.wav', translate=translate)
     Text2Speech(transcript, voice=voice, model= tts, filename=filename, stream=play)
+    return True
 
 
 def Speech2SpeechLoop(voice: str ='nova', tts: str = 'tts-1',
@@ -1258,6 +1312,9 @@ def Speech2SpeechLoop(voice: str ='nova', tts: str = 'tts-1',
                        play=True,
                        chat='alt' ,
                        exit='shift'):
+    if not AUDIO_AVAILABLE:
+        print("[ERROR] Speech to Speech Loop not available - audio libraries not installed")
+        return False
 
     print('Press '+chat+' to record, '+exit+' to exit.')
     while True:
@@ -1267,5 +1324,6 @@ def Speech2SpeechLoop(voice: str ='nova', tts: str = 'tts-1',
         elif kb.is_pressed(exit):
             print('Loop Stopped')
             break
+    return True
 
 
