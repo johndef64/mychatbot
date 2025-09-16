@@ -5,6 +5,7 @@ anthropic>=0.7.0
 langdetect>=1.0.9
 matplotlib>=3.5.0
 seaborn
+plotly
 beautifulsoup4>=4.10.0
 pyperclip>=1.8.2
 keyboard>=0.13.5
