@@ -32,9 +32,17 @@ def is_package_installed(package_name):
 
 if platform.system() == "Linux":
     if not is_package_installed("libportaudio2"):
-        subprocess.check_call(["sudo","apt-get", "update"])
-        subprocess.check_call(["sudo","apt-get", "install", "libportaudio2"])
-        # or conda install -c conda-forge portaudio
+        try:
+            subprocess.check_call(["sudo", "apt-get", "update"])
+            subprocess.check_call(["sudo", "apt-get", "install", "libportaudio2"])
+        except Exception as e:
+            print("[WARNING] Could not run sudo apt-get install libportaudio2. Skipping installation. Error:", e)
+            # Optionally, try conda install or just bypass
+            # try:
+            #     subprocess.check_call(["conda", "install", "-c", "conda-forge", "portaudio"])
+            # except Exception as e2:
+            #     print("[WARNING] Could not run conda install portaudio. Skipping. Error:", e2)
+            pass
     else:
         pass
 
@@ -234,7 +242,7 @@ groq_models = [
     "meta-llama/llama-guard-4-12b",
     "openai/gpt-oss-20b",
     "openai/gpt-oss-120b",
-    "moonshotai/kimi-k2-instruct",
+    "moonshotai/kimi-k2-instruct-0905",
     "mistral-saba-24b",
     "playai-tts",
     "playai-tts-arabic",
@@ -301,7 +309,7 @@ api_models = ['gpt-4o-mini', 'gpt-4o',
               "meta-llama/llama-guard-4-12b",
               "openai/gpt-oss-20b",
               "openai/gpt-oss-120b",
-              "moonshotai/kimi-k2-instruct",
+              "moonshotai/kimi-k2-instruct-0905",
               "mistral-saba-24b",
               #"playai-tts",
               "qwen-qwq-32b",
@@ -334,7 +342,7 @@ def get_max_tokens(model):
         return 20000
     elif model in ["claude-opus-4-0", "claude-sonnet-4-0", "claude-3-7-sonnet-latest",]:
         return 20000
-    elif model in ["moonshotai/kimi-k2-instruct"]:
+    elif model in ["moonshotai/kimi-k2-instruct-0905"]:
         return 16300
     elif model in ["meta-llama/llama-guard-4-12b", "openai/gpt-oss-20b","openai/gpt-oss-120b", "llama3-70b-versatile", "llama3-8b-instant",]:
         return 131072
