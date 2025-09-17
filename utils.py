@@ -1332,6 +1332,15 @@ def Speech2SpeechLoop(voice: str ='nova', tts: str = 'tts-1',
 # Requirements
 # smolagents[litellm]
 
+authorized_imports = [
+            "seaborn",
+            "matplotlib",
+            "matplotlib.pyplot",
+            "numpy",
+            "pandas"
+        ]
+
+
 def smol_agents(query, model_name="groq/llama-3.3-70b-versatile", tools=None, stream_outputs=True): 
     """
     Execute queries using Smol Agents framework with specified model and tools.
@@ -1381,12 +1390,13 @@ def smol_agents(query, model_name="groq/llama-3.3-70b-versatile", tools=None, st
                 PythonInterpreterTool(),
                 # DuckDuckGoSearchTool()
             ]
-        
+
         # Create the agent
         agent = CodeAgent(
             tools=tools, 
             model=model, 
-            stream_outputs=stream_outputs
+            stream_outputs=stream_outputs,
+            additional_authorized_imports=authorized_imports
         )
         
         print(f"🤖 Smol Agent initialized with model: {model_name}")
@@ -1458,7 +1468,8 @@ def create_smol_agent_with_tools(model_name="groq/llama-3.3-70b-versatile", incl
             tools = [available_tools[tool] for tool in include_tools if tool in available_tools]
         
         # Create agent
-        agent = CodeAgent(tools=tools, model=model, stream_outputs=True)
+        agent = CodeAgent(tools=tools, model=model, stream_outputs=True,
+            additional_authorized_imports=authorized_imports)
         
         return agent, [tool.__class__.__name__ for tool in tools]
         
