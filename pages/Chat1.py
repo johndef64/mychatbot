@@ -12,13 +12,13 @@ from assistants import *
 save_log=True
 ss = st.session_state
 ### session states name definition ####
-chat_num = '1'
-assistant_name = f"assistant_{chat_num}"
-format_name    = f"format_{chat_num}"
-chat_n         = f"chat_{chat_num}"
-sys_addings    = f"sys_add_{chat_num}"
-model_name     = f"model_{chat_num}"
-reply          = f"reply_{chat_num}"
+chat_num = 1
+assistant_name = f"assistant_{str(chat_num)}"
+format_name    = f"format_{str(chat_num)}"
+chat_n         = f"chat_{str(chat_num)}"
+sys_addings    = f"sys_add_{str(chat_num)}"
+model_name     = f"model_{str(chat_num)}"
+reply          = f"reply_{str(chat_num)}"
 
 
 
@@ -388,30 +388,6 @@ with st.sidebar:
 
 ############################################################################################
 ############################################################################################
-
-# from mychatgpt import gpt_models, deepseek_models, x_models, groq_models, Groq
-from groq import Groq
-
-
-# selct client
-def select_client(model):
-    if model in gpt_models:
-        client = OpenAI(api_key=load_api_keys()["openai"])
-    elif model in deepseek_models:
-        print("using DeepSeek model")
-        client = OpenAI(api_key=load_api_keys()["deepseek"], base_url="https://api.deepseek.com")
-    # elif model in x_models:
-    elif "grok" in model:
-        print("using Xai model")
-        client = OpenAI(api_key=load_api_keys()["grok"], base_url="https://api.x.ai/v1")
-    elif model in groq_models: 
-        print("using Groq models")
-        client = Groq(api_key=load_api_keys()["groq"])
-    elif model in anthropic_models:
-        print("using Anthorpic models")
-        client = OpenAI(api_key=load_api_keys()["anthropic"],base_url="https://api.anthropic.com/v1")
-    return client
-
 
 # <<<<<<<<<<<< >>>>>>>>>>>>>
 

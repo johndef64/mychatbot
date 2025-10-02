@@ -278,7 +278,14 @@ anthropic_models = [
         
     ]
 
-openai_compliant = gpt_models + deepseek_models + x_models + aiml_models + groq_models #+ anthropic_models
+openrouter_models = [   
+    "cognitivecomputations/dolphin3.0-mistral-24b:free",
+    "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
+    "thedrummer/cydonia-24b-v4.1",
+    "x-ai/grok-4-fast:free"
+    ]
+
+openai_compliant = gpt_models + deepseek_models + x_models + aiml_models + groq_models + openrouter_models #+ anthropic_models
 
 
 ####### Image Models #######
@@ -340,6 +347,11 @@ api_models = ['gpt-4o-mini', 'gpt-4o',
               "claude-3-5-sonnet-latest",
               "claude-3-5-haiku-latest", 
               "claude-3-opus-latest", 
+
+              "cognitivecomputations/dolphin3.0-mistral-24b:free",
+              "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
+              "thedrummer/cydonia-24b-v4.1",
+              "x-ai/grok-4-fast:free",
               
               ]
 
@@ -506,6 +518,36 @@ def save_api_keys():
         pass_api_keys()
 
 api_keys = load_api_keys()
+
+
+# from mychatgpt import gpt_models, deepseek_models, x_models, groq_models, Groq
+from groq import Groq
+
+
+# selct client
+def select_client(model):
+    if model in gpt_models:
+        client = OpenAI(api_key=load_api_keys()["openai"])
+    elif model in deepseek_models:
+        print("using DeepSeek model")
+        client = OpenAI(api_key=load_api_keys()["deepseek"], base_url="https://api.deepseek.com")
+    # elif model in x_models:
+    elif "grok" in model:
+        print("using Xai model")
+        client = OpenAI(api_key=load_api_keys()["grok"], base_url="https://api.x.ai/v1")
+    elif model in groq_models: 
+        print("using Groq models")
+        client = Groq(api_key=load_api_keys()["groq"])
+    elif model in anthropic_models:
+        print("using Anthorpic models")
+        client = OpenAI(api_key=load_api_keys()["anthropic"],base_url="https://api.anthropic.com/v1")
+    elif model in openrouter_models:
+        print("using OpenRouter models")
+        client = OpenAI(api_key=load_api_keys()["openrouter"], base_url="https://openrouter.ai/api/v1")
+    return client
+
+
+
 
 ###### Encrypters ######
 
