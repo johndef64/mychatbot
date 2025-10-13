@@ -304,6 +304,64 @@ assistants = {
     #'''\nRispondi come nel seguante esempio:\n    Input: Compra scarpe ai grandi magazzini.\n    Traduzione: Ela compra sapatos na loja de departamentos.\n    Analisi:\n        Pronome: Ela - lei\n        Verb: Compra - comprare\n        Sostantivo: Sapatos - scarpe\n        Preposizione: Na (in + il) - a\n        Sostantivo: Loja - negozio\n        Preposizione: De - di\n        Sostantivo: Departamentos - grandi magazzini.'''
 }
 
+avatar_dict = {
+    'none':'',
+    'base': "🤖",
+    'creator': "👩‍🎨",
+    'fixer': "👨‍🔧",
+    'novelist': "👩‍💻",
+    'delamain': "🤖",
+    'snake': "🐍",
+    'oracle': "🔮",
+    'roger': "📊",
+    'robert' : "📈",
+    'galileo' : "🔭",
+    'newton'  : "🍎",
+    'leonardo': "🎨",
+    'mendel'  : "🧬",
+    'watson'  : "🧪",
+    'crick'   : "🧫",
+    'venter'  : "🧬",
+    'collins'  : "📚",
+    'elsevier' : "📖",
+    'springer' : "📃",
+    'darwin'  : "🐒",
+    'dawkins' : "📜",
+    'turing'  : "💻",
+    'marker'  : "📝",
+    'penrose' : "🧠",
+    'mike':     "👱🏻‍♂️",
+    'michael':    "👨🏻‍💼",
+    'julia':    "👩🏻‍💼",
+    'jane':      "👩🏻‍💼",
+    'yoko':     "👩🏻‍🎤",
+    'asuka':    "👩🏻",
+    'misa':      "👩🏻",
+    'hero':     "👦🏻",
+    'xiao':     "👩🏻",
+    'peng':     "👦🏻",
+    'miguel':   "👨🏻‍",
+    'francois': "👨🏻‍",
+    'luca':     "👨🏻‍",
+    'schematizer': "🗂️",
+    'english': "🇬🇧",
+    'spanish': "🇪🇸",
+    'french': "🇫🇷",
+    'italian': "🇮🇹",
+    'portuguese': "🇵🇹",
+    "korean": "🇰🇷",
+    "chinese": "🇨🇳",
+    "japanese": "🇯🇵",
+    "japanese_teacher": "🇯🇵",
+    "portuguese_teacher": "🇵🇹",
+    "portoghese_insegnante": "🇵🇹"
+}
+
+def get_assistant_avatar(assistant_name):
+    if assistant_name in assistants.keys():
+        return avatar_dict.get(assistant_name, '🤖')
+
+
 from io import StringIO
 import pandas as pd
 

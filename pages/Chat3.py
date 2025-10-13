@@ -132,7 +132,7 @@ assistant_list = [
 
 # Try to import 'extra' from 'extra_assistant' if it's available
 try:
-    from extra_assistants import extra
+    from assistants_ext import extra
 except ImportError:
     # If the import fails, initialize 'extra' as an empty dictionary
     extra = {}

@@ -130,9 +130,9 @@ assistant_list = [
     'english', 'spanish', 'french', 'italian', 'portuguese', 'korean', 'chinese', 'japanese', 'japanese_teacher', 'portuguese_teacher'
 ]
 
-# Try to import 'extra' from 'extra_assistant' if it's available
+# Try to import 'extra' from 'assistant_ext' if it's available
 try:
-    from extra_assistants import extra
+    from assistants_ext import extra
 except ImportError:
     # If the import fails, initialize 'extra' as an empty dictionary
     extra = {}

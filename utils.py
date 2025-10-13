@@ -280,6 +280,7 @@ anthropic_models = [
 
 openrouter_models = [   
     "cognitivecomputations/dolphin3.0-mistral-24b:free",
+    "cognitivecomputations/dolphin3.0-r1-mistral-24b:free",
     "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
     "thedrummer/cydonia-24b-v4.1",
     "x-ai/grok-4-fast:free"
@@ -349,6 +350,7 @@ api_models = ['gpt-4o-mini', 'gpt-4o',
               "claude-3-opus-latest", 
 
               "cognitivecomputations/dolphin3.0-mistral-24b:free",
+              "cognitivecomputations/dolphin3.0-r1-mistral-24b:free",
               "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
               "thedrummer/cydonia-24b-v4.1",
               "x-ai/grok-4-fast:free",
