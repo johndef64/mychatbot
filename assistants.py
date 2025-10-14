@@ -304,8 +304,23 @@ assistants = {
     #'''\nRispondi come nel seguante esempio:\n    Input: Compra scarpe ai grandi magazzini.\n    Traduzione: Ela compra sapatos na loja de departamentos.\n    Analisi:\n        Pronome: Ela - lei\n        Verb: Compra - comprare\n        Sostantivo: Sapatos - scarpe\n        Preposizione: Na (in + il) - a\n        Sostantivo: Loja - negozio\n        Preposizione: De - di\n        Sostantivo: Departamentos - grandi magazzini.'''
 }
 
+narrative_styles = {
+    'prima_persona':"""
+
+""",
+"terza_persona":"""
+
+"""
+
+}
+
+
+
+
+
+
 avatar_dict = {
-    'none':'',
+    'none':"🤖",
     'base': "🤖",
     'creator': "👩‍🎨",
     'fixer': "👨‍🔧",
