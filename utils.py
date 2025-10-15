@@ -199,31 +199,30 @@ gpt_models_dict = {
     "gpt-4.1-nano": 128000,
 
     "gpt-4o": 128000,
-    "gpt-4o-2024-05-13": 128000,
-    "gpt-4o-2024-08-06": 128000,
-    "chatgpt-4o-latest": 128000,
+    # "gpt-4o-2024-05-13": 128000,
+    # "gpt-4o-2024-08-06": 128000,
+    # "chatgpt-4o-latest": 128000,
     "gpt-4o-mini": 128000,
-    "gpt-4o-mini-2024-07-18": 128000,
-    "o1-preview": 128000,
-    "o1-preview-2024-09-12": 128000,
+    # "gpt-4o-mini-2024-07-18": 128000,
+    # "o1-preview": 128000,
+    # "o1-preview-2024-09-12": 128000,
     "o1-mini": 128000,
-    "o1-mini-2024-09-12": 128000,
-    "gpt-4-turbo": 128000,
-    "gpt-4-turbo-2024-04-09": 128000,
-    "gpt-4-turbo-preview": 128000,
-    "gpt-4-0125-preview": 128000,
-    "gpt-4-1106-preview": 128000,
-    "gpt-4": 8192,
-    "gpt-4-0613": 8192,
-    "gpt-4-0314": 8192,
-    "gpt-3.5-turbo-0125": 16385,
-    "gpt-3.5-turbo": 16385,
-    "gpt-3.5-turbo-1106": 16385,
-    "gpt-3.5-turbo-instruct": 4096,
+    # "o1-mini-2024-09-12": 128000,
+    # "gpt-4-turbo": 128000,
+    # "gpt-4-turbo-2024-04-09": 128000,
+    # "gpt-4-turbo-preview": 128000,
+    # "gpt-4-0125-preview": 128000,
+    # "gpt-4-1106-preview": 128000,
+    # "gpt-4": 8192,
+    # "gpt-4-0613": 8192,
+    # "gpt-4-0314": 8192,
+    # "gpt-3.5-turbo-0125": 16385,
+    # "gpt-3.5-turbo": 16385,
+    # "gpt-3.5-turbo-1106": 16385,
+    # "gpt-3.5-turbo-instruct": 4096,
+}
 
-    "deepseek-chat": 128000,
-    'deepseek-reasoner': 128000,
-
+general_models_dict = {
     "dolphin-mistral": 16385,
     "gemma:2b" : 8192,
     "gemma2:2b" : 8192,
@@ -239,21 +238,42 @@ gpt_models_dict = {
     "gemini-2.0-flash-exp": 16385,
 }
 
-gpt_models = [i for i in gpt_models_dict.keys() if "gpt" in i or "o1" in i]+["dall-e-2", "dall-e-3", "whisper-1", "tts-1", "tts-1-hd"]
-deepseek_models = ["deepseek-chat", 'deepseek-reasoner']
-x_models = ["grok-2-1212", 'grok-2-vision-1212', "grok-2-latest"]
-aiml_models = ["cognitivecomputations/dolphin-2.5-mixtral-8x7", "qwen-turbo"]
+gpt_models = list(gpt_models_dict.keys())
+gpt_models_full = gpt_models + [
+    "dall-e-2", 
+    "dall-e-3", 
+    "whisper-1", 
+    "tts-1", 
+    "tts-1-hd"
+]
+deepseek_models_dict = {
+    "deepseek-chat": 128000,
+    'deepseek-reasoner': 128000,
+}
+deepseek_models = list(deepseek_models_dict.keys())
+
+x_models = [
+    # "grok-2-1212", 
+    # 'grok-2-vision-1212', 
+    "grok-2-latest",
+    "grok-3",
+    "grok-4",
+    ]
+aiml_models = [
+    # "cognitivecomputations/dolphin-2.5-mixtral-8x7", 
+    # "qwen-turbo"
+    ]
 groq_models = [
     "gemma2-9b-it",
     "llama-3.3-70b-versatile",
-    "llama-3.1-8b-instant",
-    "llama-guard-3-8b",
-    "llama3-70b-8192",
-    "llama3-8b-8192",
-    "whisper-large-v3",
-    "whisper-large-v3-turbo",
-    "distil-whisper-large-v3-en",
-    "allam-2-7b",
+    # "llama-3.1-8b-instant",
+    # "llama-guard-3-8b",
+    # "llama3-70b-8192",
+    # "llama3-8b-8192",
+    # "whisper-large-v3",
+    # "whisper-large-v3-turbo",
+    # "distil-whisper-large-v3-en",
+    # "allam-2-7b",
     "deepseek-r1-distill-llama-70b",
     "meta-llama/llama-4-maverick-17b-128e-instruct",
     "meta-llama/llama-4-scout-17b-16e-instruct",
@@ -262,8 +282,8 @@ groq_models = [
     "openai/gpt-oss-120b",
     "moonshotai/kimi-k2-instruct-0905",
     "mistral-saba-24b",
-    "playai-tts",
-    "playai-tts-arabic",
+    # "playai-tts",
+    # "playai-tts-arabic",
     "qwen-qwq-32b",
     #"compound-beta",
     #"compound-beta-mini",
@@ -280,13 +300,16 @@ anthropic_models = [
 
 openrouter_models = [   
     "cognitivecomputations/dolphin3.0-mistral-24b:free",
-    "cognitivecomputations/dolphin3.0-r1-mistral-24b:free",
+    "cognitivecomputations/dolphin3.0-mistral-24b",
+    # "cognitivecomputations/dolphin3.0-r1-mistral-24b:free",
     "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
+    "cognitivecomputations/dolphin-llama-3-70b",
     "thedrummer/cydonia-24b-v4.1",
-    "x-ai/grok-4-fast:free"
+    "x-ai/grok-4-fast:free",
+    "x-ai/grok-4-fast"
     ]
 
-openai_compliant = gpt_models + deepseek_models + x_models + aiml_models + groq_models + openrouter_models #+ anthropic_models
+openai_compliant = gpt_models_full + deepseek_models + x_models + aiml_models + groq_models + openrouter_models #+ anthropic_models
 
 
 ####### Image Models #######
@@ -313,49 +336,7 @@ TTS HD	$0.030 / 1K characters
 ##### Parameters ######
 
 # General parameters
-api_models = ['gpt-4o-mini', 'gpt-4o',
-              "gpt-4.1",  "gpt-4.1-mini", "gpt-4.1-nano",
-              # "o1-mini",
-              "deepseek-chat", "deepseek-reasoner",
-              "grok-2-latest",
-              "grok-3",
-              "grok-4",
-
-              "gemma2-9b-it",
-              #"llama-3.3-70b-versatile",
-              #"llama-3.1-8b-instant",
-              #"llama-guard-3-8b",
-              "llama3-70b-8192",
-              "llama-3.3-70b-versatile",
-              #"llama3-8b-8192",
-              #"allam-2-7b",
-              "deepseek-r1-distill-llama-70b",
-              "meta-llama/llama-4-maverick-17b-128e-instruct",
-              "meta-llama/llama-4-scout-17b-16e-instruct",
-              "meta-llama/llama-guard-4-12b",
-              "openai/gpt-oss-20b",
-              "openai/gpt-oss-120b",
-              "moonshotai/kimi-k2-instruct-0905",
-              "mistral-saba-24b",
-              #"playai-tts",
-              "qwen-qwq-32b",
-              #"compound-beta",
-              #"compound-beta-mini"
-
-              "claude-opus-4-0", 
-              "claude-sonnet-4-0", 
-              "claude-3-7-sonnet-latest",
-              "claude-3-5-sonnet-latest",
-              "claude-3-5-haiku-latest", 
-              "claude-3-opus-latest", 
-
-              "cognitivecomputations/dolphin3.0-mistral-24b:free",
-              "cognitivecomputations/dolphin3.0-r1-mistral-24b:free",
-              "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
-              "thedrummer/cydonia-24b-v4.1",
-              "x-ai/grok-4-fast:free",
-              
-              ]
+api_models = gpt_models_full + deepseek_models + x_models + groq_models + anthropic_models + openrouter_models
 
 def get_max_tokens(model):
     if model in ["claude-3-5-haiku-latest", "claude-3-5-sonnet-latest",
