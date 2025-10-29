@@ -1390,12 +1390,22 @@ def smol_agents(query, model_name="groq/llama-3.3-70b-versatile", tools=None, st
         # Determine the correct API key based on model prefix
         if model_name.startswith("groq/"):
             api_key = api_keys.get("groq", "missing")
+            model_name = f"groq/{model_name}"
         elif model_name.startswith("openai/") or "gpt" in model_name:
             api_key = api_keys.get("openai", "missing")
+            model_name = f"openai/{model_name}"
         elif model_name.startswith("deepseek/") or "deepseek" in model_name:
             api_key = api_keys.get("deepseek", "missing")
+            model_name = f"deepseek/{model_name}"
         elif model_name.startswith("anthropic/") or "claude" in model_name:
             api_key = api_keys.get("anthropic", "missing")
+            model_name = f"anthropic/{model_name}"
+        elif model_name.startswith("xai/") or "grok" in model_name:
+            api_key = api_keys.get("grok", "missing")
+            model_name = f"xai/{model_name}"
+        elif model_name.startswith("openrouter/") or "cognitivecomputations/" in model_name:
+            api_key = api_keys.get("openrouter", "missing")
+            model_name = f"openrouter/{model_name}"
         else:
             # Default to Groq for unknown models
             api_key = api_keys.get("groq", "missing")
