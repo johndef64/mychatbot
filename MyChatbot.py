@@ -6,13 +6,19 @@ import base64
 from utils import *
 from assistants import *
 import pyperclip as pc
+from image_gen import (
+    OPENAI_IMAGE_MODELS, GOOGLE_IMAGE_MODELS,
+    OPENROUTER_IMAGE_MODELS, ALIBABA_IMAGE_MODELS,
+    DEFAULT_IMAGE_MODELS, IMAGE_TRIGGERS,
+    is_image_prompt, generate_image, save_image,
+)
 
 save_log = True
 ss = st.session_state
 
 # ─── Theme ────────────────────────────────────────────────────────────────────
 if "dark_mode" not in ss:
-    ss["dark_mode"] = True
+    ss["dark_mode"] = False
 
 def apply_theme():
     if ss["dark_mode"]:
@@ -571,6 +577,55 @@ with st.sidebar:
 
     st.divider()
 
+    # ── Image Generation ───────────────────────────────────────────────────────
+    st.subheader("🎨 Image Generation")
+
+    _img_providers = ["OpenAI", "Google", "OpenRouter", "Alibaba"]
+    _img_models_map = {
+        "OpenAI":     list(OPENAI_IMAGE_MODELS.keys()),
+        "Google":     list(GOOGLE_IMAGE_MODELS.keys()),
+        "OpenRouter": list(OPENROUTER_IMAGE_MODELS.keys()),
+        "Alibaba":    list(ALIBABA_IMAGE_MODELS.keys()),
+    }
+
+    if "img_provider" not in ss:
+        ss["img_provider"] = "OpenRouter"
+    if "img_model" not in ss:
+        ss["img_model"] = DEFAULT_IMAGE_MODELS["OpenRouter"]
+    if "img_aspect" not in ss:
+        ss["img_aspect"] = "1:1"
+
+    img_provider = st.selectbox(
+        "🏢 Image Provider", _img_providers,
+        index=_img_providers.index(ss["img_provider"]),
+        key="img_provider_sel"
+    )
+    # Reset model when provider changes
+    if img_provider != ss["img_provider"]:
+        ss["img_provider"] = img_provider
+        ss["img_model"] = DEFAULT_IMAGE_MODELS[img_provider]
+
+    _cur_img_models = _img_models_map[img_provider]
+    _cur_idx = _cur_img_models.index(ss["img_model"]) if ss["img_model"] in _cur_img_models else 0
+    img_model = st.selectbox(
+        "🖼️ Image Model", _cur_img_models,
+        index=_cur_idx,
+        key="img_model_sel"
+    )
+    ss["img_model"] = img_model
+
+    img_aspect = st.selectbox(
+        "📐 Aspect Ratio",
+        ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"],
+        index=["1:1","16:9","9:16","4:3","3:4","3:2","2:3"].index(ss["img_aspect"]),
+        key="img_aspect_sel"
+    )
+    ss["img_aspect"] = img_aspect
+
+    st.caption("💡 Trigger: `#create`, `#imagine`, `#draw`, `#paint`")
+
+    st.divider()
+
     # File uploads
     st.subheader("📁 Attachments")
     uploaded_image = st.file_uploader("🖼️ Image", type=("jpg", "png", "jpeg"))
@@ -768,6 +823,45 @@ for tab_i, tab in enumerate(tabs):
 # ── Handle prompt (outside tabs, anchored to bottom) ──────────────────────────
 if prompt:
     messages = ss[chat_key(ci, "messages")]
+
+    # ── Image generation trigger ───────────────────────────────────────────
+    _is_img, _img_prompt = is_image_prompt(prompt)
+    if _is_img:
+        st.chat_message('user', avatar=user_avi).write(prompt)
+        _img_provider = ss.get("img_provider", "OpenRouter")
+        _img_model    = ss.get("img_model",    DEFAULT_IMAGE_MODELS["OpenRouter"])
+        _img_aspect   = ss.get("img_aspect",   "1:1")
+
+        with st.spinner(f"🎨 Generating image with {_img_model}…"):
+            _img, _err = generate_image(
+                prompt=_img_prompt,
+                provider=_img_provider,
+                model_label=_img_model,
+                api_keys=load_api_keys(),
+                aspect_ratio=_img_aspect,
+            )
+
+        if _err:
+            st.error(f"❌ Image generation failed: {_err}")
+            # Save error as assistant message so it's in history
+            _err_msg = f"❌ Image generation error: {_err}"
+            ss[chat_key(ci, "messages")].append({"role": "user",      "content": prompt})
+            ss[chat_key(ci, "messages")].append({"role": "assistant", "content": _err_msg})
+        else:
+            # Save image to disk
+            _img_path = save_image(_img, _img_prompt, _img_model, folder="images")
+            # Show in chat
+            with st.chat_message("assistant", avatar=chatbot_avi):
+                st.image(_img, caption=f"🎨 {_img_model} · {_img_aspect} · {_img_prompt[:80]}")
+                st.caption(f"💾 Saved: `{_img_path}`")
+            # Store reference in chat history
+            _rel = os.path.relpath(_img_path)
+            ss[chat_key(ci, "messages")].append({"role": "user",      "content": prompt})
+            ss[chat_key(ci, "messages")].append({
+                "role": "assistant",
+                "content": f"[Generated image: {_rel}]\n\nPrompt: _{_img_prompt}_\nModel: {_img_model} | Aspect: {_img_aspect}"
+            })
+        st.stop()
 
     if prompt in ["-", "@"]:
         ass_c = assistants[ss[chat_key(ci, "assistant_name")]] + features['reply_style'][ss[chat_key(ci, "format_name")]]
