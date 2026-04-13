@@ -3,46 +3,434 @@ import pickle
 from openai import OpenAI
 import streamlit as st
 import base64
-#from assistants import *
-#from mychatgpt import GPT, play_audio
 from utils import *
 from assistants import *
-# from mychatgpt import rileva_lingua, update_log
+import pyperclip as pc
 
-save_log=True
+save_log = True
 ss = st.session_state
-### session states name definition ####
-chat_num = 0
-assistant_name = f"assistant_{str(chat_num)}"
-format_name    = f"format_{str(chat_num)}"
-chat_n         = f"chat_{str(chat_num)}"
-sys_addings    = f"sys_add_{str(chat_num)}"
-model_name     = f"model_{str(chat_num)}"
-reply          = f"reply_{str(chat_num)}"
 
+# ─── Theme ────────────────────────────────────────────────────────────────────
+if "dark_mode" not in ss:
+    ss["dark_mode"] = True
 
+def apply_theme():
+    if ss["dark_mode"]:
+        bg          = "#1e1e2e"
+        sidebar_bg  = "#181825"
+        text        = "#cdd6f4"
+        subtext     = "#a6adc8"
+        input_bg    = "#313244"
+        border      = "#45475a"
+        accent      = "#89b4fa"
+        accent_txt  = "#1e1e2e"
+        msg_bot     = "#252535"
+        code_bg     = "#11111b"
+        hover_bg    = "#3d3f55"
+        warning_bg  = "#3d3020"
+        success_bg  = "#1e3328"
+        info_bg     = "#1e2a3d"
+        upload_bg   = "#252535"
+        tab_active  = accent
+        tab_txt_act = accent_txt
+    else:
+        bg          = "#f8f9fa"
+        sidebar_bg  = "#e9ecef"
+        text        = "#212529"
+        subtext     = "#6c757d"
+        input_bg    = "#ffffff"
+        border      = "#dee2e6"
+        accent      = "#0d6efd"
+        accent_txt  = "#ffffff"
+        msg_bot     = "#f8f9fa"
+        code_bg     = "#f1f3f5"
+        hover_bg    = "#e2e6ea"
+        warning_bg  = "#fff3cd"
+        success_bg  = "#d1e7dd"
+        info_bg     = "#cfe2ff"
+        upload_bg   = "#f0f2f6"
+        tab_active  = accent
+        tab_txt_act = "#ffffff"
+
+    st.markdown(f"""
+    <style>
+    /* ── Root & body ── */
+    html, body, [class*="css"], .stApp {{
+        background-color: {bg} !important;
+        color: {text} !important;
+    }}
+
+    /* ── Main content area ── */
+    .main .block-container {{
+        background-color: {bg} !important;
+        color: {text} !important;
+    }}
+
+    /* ── Sidebar ── */
+    section[data-testid="stSidebar"],
+    section[data-testid="stSidebar"] > div {{
+        background-color: {sidebar_bg} !important;
+    }}
+    section[data-testid="stSidebar"] * {{
+        color: {text} !important;
+    }}
+    section[data-testid="stSidebar"] .stButton > button {{
+        background-color: {input_bg} !important;
+        border-color: {border} !important;
+        color: {text} !important;
+    }}
+
+    /* ── Labels & text ── */
+    label, p, span, div, h1, h2, h3, h4, h5, h6,
+    .stMarkdown, .stText, [data-testid="stMarkdownContainer"] {{
+        color: {text} !important;
+    }}
+    small, .caption, [data-testid="stCaptionContainer"] {{
+        color: {subtext} !important;
+    }}
+
+    /* ── Text inputs ── */
+    .stTextInput > div > div > input,
+    .stTextArea > div > div > textarea,
+    input[type="text"], input[type="password"], textarea {{
+        background-color: {input_bg} !important;
+        color: {text} !important;
+        border-color: {border} !important;
+        caret-color: {text} !important;
+    }}
+    .stTextInput > div > div > input:focus,
+    .stTextArea > div > div > textarea:focus {{
+        border-color: {accent} !important;
+        box-shadow: 0 0 0 2px {accent}44 !important;
+    }}
+
+    /* ── Selectbox / dropdowns ── */
+    div[data-baseweb="select"] > div,
+    div[data-baseweb="select"] > div > div {{
+        background-color: {input_bg} !important;
+        color: {text} !important;
+        border-color: {border} !important;
+    }}
+    div[data-baseweb="select"] span {{
+        color: {text} !important;
+    }}
+    div[data-baseweb="popover"],
+    div[data-baseweb="popover"] > div,
+    div[data-baseweb="menu"],
+    div[data-baseweb="menu"] ul {{
+        background-color: {input_bg} !important;
+        color: {text} !important;
+    }}
+    div[data-baseweb="menu"] li {{
+        background-color: {input_bg} !important;
+        color: {text} !important;
+    }}
+    div[data-baseweb="menu"] li:hover {{
+        background-color: {hover_bg} !important;
+    }}
+    div[data-baseweb="menu"] [aria-selected="true"] {{
+        background-color: {accent}33 !important;
+    }}
+
+    /* ── Buttons ── */
+    .stButton > button {{
+        background-color: {input_bg} !important;
+        color: {text} !important;
+        border: 1px solid {border} !important;
+        border-radius: 6px !important;
+    }}
+    .stButton > button:hover {{
+        border-color: {accent} !important;
+        color: {accent} !important;
+        background-color: {hover_bg} !important;
+    }}
+    .stDownloadButton > button {{
+        background-color: {input_bg} !important;
+        color: {text} !important;
+        border: 1px solid {border} !important;
+    }}
+
+    /* ── Chat messages ── */
+    .stChatMessage {{
+        background-color: {msg_bot} !important;
+        border: 1px solid {border} !important;
+        border-radius: 10px !important;
+        margin-bottom: 8px !important;
+    }}
+    [data-testid="stChatMessageContent"],
+    [data-testid="stChatMessageContent"] * {{
+        color: {text} !important;
+    }}
+
+    /* ── Chat input ── */
+    [data-testid="stChatInput"],
+    [data-testid="stChatInput"] > div,
+    [data-testid="stChatInput"] textarea,
+    .stChatInputContainer,
+    .stChatInputContainer > div,
+    .stChatInputContainer textarea {{
+        background-color: {input_bg} !important;
+        color: {text} !important;
+        border-color: {border} !important;
+    }}
+    [data-testid="stChatInput"] textarea:focus {{
+        border-color: {accent} !important;
+    }}
+    [data-testid="stChatInput"] button {{
+        background-color: {accent} !important;
+        color: {accent_txt} !important;
+    }}
+
+    /* ── File uploader ── */
+    [data-testid="stFileUploader"],
+    [data-testid="stFileUploadDropzone"],
+    [data-testid="stFileUploadDropzone"] > div,
+    section[data-testid="stFileUploadDropzone"] {{
+        background-color: {upload_bg} !important;
+        border-color: {border} !important;
+        color: {text} !important;
+    }}
+    [data-testid="stFileUploadDropzone"] span,
+    [data-testid="stFileUploadDropzone"] p,
+    [data-testid="stFileUploadDropzone"] small {{
+        color: {subtext} !important;
+    }}
+    [data-testid="stFileUploadDropzone"] button {{
+        background-color: {input_bg} !important;
+        color: {text} !important;
+        border-color: {border} !important;
+    }}
+
+    /* ── Expander ── */
+    details, [data-testid="stExpander"],
+    [data-testid="stExpander"] > div {{
+        background-color: {input_bg} !important;
+        border-color: {border} !important;
+        color: {text} !important;
+    }}
+    details summary {{
+        color: {text} !important;
+    }}
+
+    /* ── Checkboxes ── */
+    .stCheckbox label span {{
+        color: {text} !important;
+    }}
+
+    /* ── Alerts / info boxes ── */
+    [data-testid="stAlert"] {{
+        color: {text} !important;
+    }}
+    .stAlert [data-baseweb="notification"] {{
+        background-color: {info_bg} !important;
+        color: {text} !important;
+    }}
+    div[data-testid="stNotification"],
+    div.element-container div.stInfo,
+    div.element-container div.stSuccess,
+    div.element-container div.stWarning,
+    div.element-container div.stError {{
+        color: {text} !important;
+    }}
+
+    /* ── Tabs ── */
+    .stTabs [data-baseweb="tab-list"] {{
+        background-color: {sidebar_bg} !important;
+        border-radius: 8px !important;
+        padding: 4px !important;
+        gap: 4px !important;
+    }}
+    .stTabs [data-baseweb="tab"] {{
+        background-color: transparent !important;
+        color: {subtext} !important;
+        border-radius: 6px !important;
+    }}
+    .stTabs [data-baseweb="tab"]:hover {{
+        background-color: {hover_bg} !important;
+        color: {text} !important;
+    }}
+    .stTabs [aria-selected="true"] {{
+        background-color: {tab_active} !important;
+        color: {tab_txt_act} !important;
+        border-radius: 6px !important;
+    }}
+    .stTabs [data-baseweb="tab-panel"] {{
+        background-color: {bg} !important;
+    }}
+
+    /* ── Divider ── */
+    hr {{ border-color: {border} !important; }}
+
+    /* ── Code ── */
+    code, pre, .stCode {{
+        background-color: {code_bg} !important;
+        color: {text} !important;
+        border-color: {border} !important;
+    }}
+
+    /* ── Metrics ── */
+    [data-testid="stMetricValue"] {{ color: {accent} !important; }}
+    [data-testid="stMetricLabel"] {{ color: {subtext} !important; }}
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar {{ width: 6px; height: 6px; }}
+    ::-webkit-scrollbar-track {{ background: {bg}; }}
+    ::-webkit-scrollbar-thumb {{ background: {border}; border-radius: 3px; }}
+    ::-webkit-scrollbar-thumb:hover {{ background: {accent}; }}
+
+    /* ── Dataframe / table ── */
+    [data-testid="stDataFrame"] * {{
+        background-color: {input_bg} !important;
+        color: {text} !important;
+    }}
+    </style>
+    """, unsafe_allow_html=True)
+
+apply_theme()
+
+# ─── Multi-chat session management ────────────────────────────────────────────
+MAX_CHATS = 6
+
+if "num_chats" not in ss:
+    ss["num_chats"] = 1
+if "active_chat" not in ss:
+    ss["active_chat"] = 0
+
+def chat_key(i, key):
+    return f"chat{i}_{key}"
+
+def init_chat(i):
+    if chat_key(i, "assistant_name") not in ss:
+        ss[chat_key(i, "assistant_name")] = "none"
+    if chat_key(i, "format_name") not in ss:
+        ss[chat_key(i, "format_name")] = "base"
+    if chat_key(i, "model_name") not in ss:
+        ss[chat_key(i, "model_name")] = "moonshotai/kimi-k2-instruct-0905"
+    if chat_key(i, "messages") not in ss:
+        ass_name = ss[chat_key(i, "assistant_name")]
+        if "assistant" not in ss:
+            ss["assistant"] = assistants[ass_name]
+        ss[chat_key(i, "messages")] = [{"role": "system", "content": ss["assistant"]}]
+    if chat_key(i, "sys_addings") not in ss:
+        ss[chat_key(i, "sys_addings")] = []
+    if chat_key(i, "reply") not in ss:
+        ss[chat_key(i, "reply")] = ""
+    if chat_key(i, "title") not in ss:
+        ss[chat_key(i, "title")] = f"Chat {i+1}"
+
+for i in range(MAX_CHATS):
+    init_chat(i)
+
+# ─── Assistants ───────────────────────────────────────────────────────────────
+format_list = list(features['reply_style'].keys())
+
+assistant_list = [
+    'none', 'base', 'creator', 'fixer', 'novelist', 'delamain', 'oracle', 'snake', 'roger',
+    'leonardo', 'galileo', 'newton',
+    'mendel', 'watson', 'crick', 'venter',
+    'collins', 'elsevier', 'springer',
+    'darwin', 'dawkins',
+    'penrose', 'turing', 'marker',
+    'mike', 'michael', 'julia', 'jane', 'yoko', 'asuka', 'misa', 'hero', 'xiao', 'peng',
+    'miguel', 'francois', 'luca',
+    'english', 'spanish', 'french', 'italian', 'portuguese',
+    'korean', 'chinese', 'japanese', 'japanese_teacher', 'portuguese_teacher'
+]
+
+try:
+    from assistants_ext import extra
+except ImportError:
+    extra = {}
+assistants.update(extra)
+assistant_list.extend(extra.keys())
+
+if "assistant" not in ss:
+    ss["assistant"] = assistants["none"]
+
+# ─── API Keys ─────────────────────────────────────────────────────────────────
+if len(list(load_api_keys().keys())) > 0:
+    api_keys = load_api_keys()
+    ss.openai_api_key    = api_keys.get("openai",    "missing")
+    ss.gemini_api_key    = api_keys.get("gemini",    "missing")
+    ss.googleai_api_key  = api_keys.get("googleai",  "missing")
+    ss.deepseek_api_key  = api_keys.get("deepseek",  "missing")
+    ss.x_api_key         = api_keys.get("grok",      "missing")
+    ss.groq_api_key      = api_keys.get("groq",      "missing")
+    ss.anthropic_api_key = api_keys.get("anthropic", "missing")
+    ss.alibaba_api_key   = api_keys.get("alibaba",   "missing")
+    ss.openrouter_api_key= api_keys.get("openrouter","missing")
+else:
+    ss.openai_api_key = ss.gemini_api_key = ss.googleai_api_key = None
+    ss.deepseek_api_key = ss.x_api_key = ss.groq_api_key = None
+    ss.anthropic_api_key = ss.alibaba_api_key = ss.openrouter_api_key = None
+
+# ─── Helpers ──────────────────────────────────────────────────────────────────
+def get_local_ip():
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("8.8.8.8", 80))
+            return s.getsockname()[0]
+    except Exception:
+        return "localhost"
+
+if 'app_initialized' not in ss:
+    local_ip = get_local_ip()
+    print("\n" + "#"*62)
+    print("##      MYCHATBOT PRO - MULTI-AI ASSISTANT v2.0           ##")
+    print("#"*62)
+    print(f"|| STREAMING: http://{local_ip}:8501")
+    print("|| MODELS: OpenAI | DeepSeek | Grok | Groq | Anthropic | Google | Alibaba")
+    print("-"*62 + "\n")
+    ss['app_initialized'] = True
+
+def encode_ioimage(uploaded_image):
+    image_data = uploaded_image.read()
+    return base64.b64encode(image_data).decode("utf-8")
+
+def encode_image(image_path):
+    with open(image_path, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode('utf-8')
+
+def strip_think_tag(input_string):
+    pattern = r"<think>(.*?)</think>"
+    think_part = re.findall(pattern, input_string, re.DOTALL)
+    senza_think = re.sub(pattern, '', input_string, flags=re.DOTALL).strip()
+    think_part = think_part[0].strip() if think_part else ''
+    return senza_think, think_part
+
+def remove_system_entries(input_list):
+    return [e for e in input_list if e.get('role') != 'system']
+
+def update_assistant_in_chat(chat_msgs, assistant_content, sys_addings):
+    updated = remove_system_entries(chat_msgs)
+    updated.append({"role": "system", "content": assistant_content})
+    for add in sys_addings:
+        updated.append({"role": "system", "content": add})
+    return updated
+
+def remove_last_non_system(input_list):
+    for i in range(len(input_list) - 1, -1, -1):
+        if input_list[i].get('role') != 'system':
+            del input_list[i]
+            break
+    return input_list
 
 def generate_chat_name(path, assistant_name):
-    # Counter starts at 1
     index = 1
-    # Continuously checking if the file with the current index exists
     while os.path.exists(os.path.join(path, f"{assistant_name}_{index}.pkl")):
         index += 1
-    # Return the chat name with the next available index
     return f"{assistant_name}_{index}"
 
-def save_chat_as_pickle(path='chats/'):
+def save_chat_as_pickle(chat_idx, path='chats/'):
     if not os.path.exists(path):
         os.mkdir(path)
-
-    chat_name = generate_chat_name(path, ss[assistant_name])
-    # Save chat content in pickle format
+    ass_name = ss[chat_key(chat_idx, "assistant_name")]
+    chat_name = generate_chat_name(path, ass_name)
     with open(os.path.join(path, chat_name + '.pkl'), 'wb') as file:
-        pickle.dump(ss[chat_n], file)
+        pickle.dump(ss[chat_key(chat_idx, "messages")], file)
     return chat_name
 
 def load_chat_from_pickle(file_path):
-    # Load chat content from pickle file
     with open(file_path, 'rb') as file:
         return pickle.load(file)
 
@@ -50,805 +438,461 @@ def delete_file(file_path):
     if os.path.exists(file_path):
         os.remove(file_path)
         return True
-    else:
-        return False
+    return False
 
-def export_chat_as_markdown():
-    """Export current chat as markdown format"""
-    if len(ss[chat_n]) <= 1:
+def export_chat_as_markdown(chat_idx):
+    msgs = ss[chat_key(chat_idx, "messages")]
+    ass_name = ss[chat_key(chat_idx, "assistant_name")]
+    model_id = ss[chat_key(chat_idx, "model_name")]
+    if len(msgs) <= 1:
         return "# Empty Chat\n\nNo messages to export."
-    
-    markdown_content = f"# Chat Export - {get_assistant}\n\n"
-    markdown_content += f"**Model:** {model}\n"
-    markdown_content += f"**Assistant:** {get_assistant}\n"
-    markdown_content += f"**Export Date:** {time.strftime('%Y-%m-%d %H:%M:%S')}\n\n"
-    markdown_content += "---\n\n"
-    
-    for i, msg in enumerate(ss[chat_n]):
+    md = f"# Chat Export - {ass_name}\n\n"
+    md += f"**Model:** {model_id}\n**Assistant:** {ass_name}\n"
+    md += f"**Export Date:** {time.strftime('%Y-%m-%d %H:%M:%S')}\n\n---\n\n"
+    for msg in msgs:
         if msg['role'] == 'user':
-            markdown_content += f"## 👤 User\n\n{msg['content']}\n\n"
+            md += f"## User\n\n{msg['content']}\n\n"
         elif msg['role'] == 'assistant':
-            markdown_content += f"## 🤖 {get_assistant}\n\n{msg['content']}\n\n"
+            md += f"## {ass_name}\n\n{msg['content']}\n\n"
         elif msg['role'] == 'system':
-            markdown_content += f"*System: {msg['content']}*\n\n"
-    
-    return markdown_content
+            md += f"*System: {msg['content']}*\n\n"
+    return md
 
-#%%
-
-
-# Function to be executed on button click
-def clearchat():
-    ss[chat_n] = [{"role": "system", "content": ss['assistant']}]
-    st.write("Chat cleared!")
-def clearsys():
-    ss[chat_n] = [entry for entry in ss[chat_n] if entry['role'] != 'system']
-    st.write("System cleared!")
-
-def remove_system_entries(input_list):
-    return [entry for entry in input_list if entry.get('role') != 'system']
-def update_assistant(input_list):
-    updated_list = remove_system_entries(input_list)
-    updated_list.append({"role": "system", "content": ss.assistant })
-    for add in  ss[sys_addings]:
-        updated_list.append({"role": "system", "content": add })
-    return updated_list
-
-def remove_last_non_system(input_list):
-    # Iterate backwards to find and remove the last non-system entry
-    for i in range(len(input_list) - 1, -1, -1):
-        if input_list[i].get('role') != 'system':
-            del input_list[i]  # Remove the entry
-            break  # Exit the loop once the entry is removed
-    return input_list
-
-
-
-# Check if session state exists, if not, initialize it
-if assistant_name not in ss:
-    ss[assistant_name] = 'none'
-
-format_list = list(features['reply_style'].keys())
-if format_name not in ss:
-    ss[format_name] = 'base'
-
-if "assistant" not in ss:
-    ss['assistant'] = assistants[ss[assistant_name]]
-
-# Build assistant - this will be updated after user selection in sidebar
-
-
-# assistant_list = list(assistants.keys())
-assistant_list = [
-    'none', 'base', 'creator', 'fixer', 'novelist', 'delamain',  'oracle', 'snake', 'roger', #'robert',
-    'leonardo', 'galileo', 'newton',
-    'mendel', 'watson', 'crick', 'venter',
-    'collins', 'elsevier', 'springer',
-    'darwin', 'dawkins',
-    'penrose', 'turing', 'marker',
-    'mike', 'michael', 'julia', 'jane', 'yoko', 'asuka', 'misa', 'hero', 'xiao', 'peng', 'miguel', 'francois', 'luca',
-    'english', 'spanish', 'french', 'italian', 'portuguese', 'korean', 'chinese', 'japanese', 'japanese_teacher', 'portuguese_teacher'
-]
-
-# Try to import 'extra' from 'assistant_ext' if it's available
-try:
-    from assistants_ext import extra
-except ImportError:
-    # If the import fails, initialize 'extra' as an empty dictionary
-    extra = {}
-# Add values from 'extra' to 'assistants'
-assistants.update(extra)
-# Add keys from 'extra' to 'assistant_list'
-assistant_list.extend(extra.keys())
-
-
-
-# Initialize Chat Thread
-if chat_n not in ss:
-    #ss[chat_n] = [{"role": "assistant", "content": "How can I help you?"}]
-    ss[chat_n] = [{"role": "system", "content": ss["assistant"]}]
-
-if sys_addings not in ss:
-    ss[sys_addings] = []
-
-if model_name not in ss:
-    ss[model_name] = "moonshotai/kimi-k2-instruct-0905" #"deepseek-r1-distill-llama-70b" #"gpt-4o-mini"
-
-if reply not in ss:
-    ss[reply] = ""
-
-# Update assistant in chat thread will be done after sidebar selection
-
-# Immagazzina il valore corrente in session_state e imposta il valore predefinito se non esiste
-# if 'assistant_index' not in ss:
-#     ss.assistant_index = 0
-
-#%%
-
-# Check if the file exists
-# if os.path.exists('openai_api_key.txt'):
-if len(list(load_api_keys().keys() )) > 0:
-    api_keys = load_api_keys()
-    ss.openai_api_key   = api_keys.get("openai", "missing")
-    ss.gemini_api_key   = api_keys.get("gemini", "missing")
-    ss.deepseek_api_key = api_keys.get("deepseek", "missing")
-    ss.x_api_key        = api_keys.get("grok", "missing")
-    ss.groq_api_key     = api_keys.get("groq", "missing")
-    ss.anthropic_api_key = api_keys.get("anthropic", "missing")
-
-    # with open('openai_api_key.txt', 'r') as file:
-    #     ss.openai_api_key = file.read().strip()
-    #     #ss.openai_api_key = str(open('openai_api_key.txt', 'r').read())
-else:
-    ss.openai_api_key   = None
-    ss.gemini_api_key   = None
-    ss.deepseek_api_key = None
-    ss.x_api_key        = None
-    ss.groq_api_key    = None
-    ss.anthropic_api_key = None
-
-# Function to get local IP address
-def get_local_ip():
-    try:
-        # Connect to a remote server to determine the local IP
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-            s.connect(("8.8.8.8", 80))
-            local_ip = s.getsockname()[0]
-        return local_ip
-    except Exception:
-        # Fallback to localhost if unable to determine IP
-        return "localhost"
-
-# Get the actual IP address
-local_ip = get_local_ip()
-streaming_url = f"http://{local_ip}:8501"
-
-# Retro terminal print for the chatbot - only on first run
-if 'app_initialized' not in ss:
-    print("\n" + "#"*62)
-    print("##" + " "*58 + "##")
-    print("##      MYCHATBOT PRO - MULTI-AI ASSISTANT v1.0           ##")
-    print("##" + " "*58 + "##")
-    print("#"*62)
-    print("|| STATUS: ONLINE")
-    print(f"|| STREAMING: {streaming_url}")
-    print("|| MODELS: OpenAI | DeepSeek | Grok | Groq | Anthropic")
-    print("|| READY: Advanced AI capabilities loaded")
-    print("-"*62)
-    print("SERVER RUNNING... Access your chatbot via URL above")
-    print("-"*62 + "\n")
-    print(">>> App Ready!")
-    
-    # Mark app as initialized
-    ss['app_initialized'] = True
-
-
-# <<<<<<<<<<<<Sidebar code>>>>>>>>>>>>>
+# ─── Sidebar ──────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.header("🔧 Configuration")
-    
-    # API Keys section
-    with st.expander("🔑 API Keys", expanded=not any([ss.openai_api_key, ss.deepseek_api_key, ss.x_api_key, ss.groq_api_key, ss.anthropic_api_key])):
-        if not ss.openai_api_key:
-            ss.openai_api_key = st.text_input("OpenAI API Key", key="chatbot_api_key", type="password")
-        if not ss.deepseek_api_key:
-            ss.deepseek_api_key = st.text_input("Deepseek API Key",  type="password")
-        if not ss.x_api_key:
-            ss.x_api_key  = st.text_input("Xai API Key",  type="password")
-        if not ss.groq_api_key:
-            ss.groq_api_key  = st.text_input("Groq API Key",  type="password")
-        if not ss.anthropic_api_key:
-            ss.anthropic_api_key  = st.text_input("Anthropic API Key",  type="password")
+    st.header("🤖 MyChatbot v2.0")
 
-        # API Status indicator
-        keys = {
-            "OpenAI": ss.openai_api_key,
-            "DeepSeek": ss.deepseek_api_key,
-            "X": ss.x_api_key,
-            "Groq": ss.groq_api_key,
-            "Anthropic": ss.anthropic_api_key
-        }
-        provided_keys = [name for name, key in keys.items() if key]
-        if provided_keys:
-            st.success(f"✅ {', '.join(provided_keys)} connected")
+    # Theme toggle
+    col_t1, col_t2 = st.columns([3, 1])
+    with col_t1:
+        st.caption("Appearance")
+    with col_t2:
+        theme_label = "🌙" if ss["dark_mode"] else "☀️"
+        if st.button(theme_label, key="theme_toggle", help="Toggle light/dark theme"):
+            ss["dark_mode"] = not ss["dark_mode"]
+            st.rerun()
+
+    st.divider()
+
+    # API Keys
+    with st.expander("🔑 API Keys", expanded=not any([
+            ss.openai_api_key, ss.deepseek_api_key, ss.x_api_key,
+            ss.groq_api_key, ss.anthropic_api_key])):
+        providers_keys = [
+            ("OpenAI",     "openai_api_key"),
+            ("DeepSeek",   "deepseek_api_key"),
+            ("xAI (Grok)", "x_api_key"),
+            ("Groq",       "groq_api_key"),
+            ("Anthropic",  "anthropic_api_key"),
+            ("Google AI",  "googleai_api_key"),
+            ("Alibaba",    "alibaba_api_key"),
+            ("OpenRouter", "openrouter_api_key"),
+        ]
+        for label, attr in providers_keys:
+            if not getattr(ss, attr, None) or getattr(ss, attr) in ("missing", "miss", ""):
+                val = st.text_input(f"{label} API Key", type="password", key=f"input_{attr}")
+                if val:
+                    setattr(ss, attr, val)
+
+        provided = [lbl for lbl, attr in providers_keys
+                    if getattr(ss, attr, None) not in (None, "missing", "miss", "")]
+        if provided:
+            st.success(f"✅ {', '.join(provided)}")
         else:
             st.warning("⚠️ No API keys provided")
 
     st.divider()
-    
-    # Model and Assistant section
+
+    # Model selector — grouped by provider
     st.subheader("🎯 AI Configuration")
-    model = st.selectbox('🤖 Model:', api_models, index=api_models.index(ss[model_name]))
-    get_assistant = st.selectbox("👤 Assistant", assistant_list, index=assistant_list.index(ss[assistant_name]))
-    get_format = st.selectbox("📝 Reply Format", format_list, index=format_list.index(ss[format_name]))
+
+    provider_names = list(models_by_provider.keys())
+    # Detect current model and pre-select provider
+    active_ci = ss.get("active_chat", 0)
+    current_model = ss[chat_key(active_ci, "model_name")]
+    default_provider = "Groq"
+    for pname, pmodels in models_by_provider.items():
+        if current_model in pmodels:
+            default_provider = pname
+            break
+
+    selected_provider = st.selectbox(
+        "🏢 Provider",
+        provider_names,
+        index=provider_names.index(default_provider),
+        key="sidebar_provider"
+    )
+    provider_models = models_by_provider[selected_provider]
+    default_model_idx = provider_models.index(current_model) if current_model in provider_models else 0
+    selected_model = st.selectbox(
+        "🤖 Model",
+        provider_models,
+        index=default_model_idx,
+        key="sidebar_model"
+    )
+
+    get_assistant = st.selectbox("👤 Assistant", assistant_list,
+                                  index=assistant_list.index(ss[chat_key(active_ci, "assistant_name")]),
+                                  key="sidebar_assistant")
+    get_format    = st.selectbox("📝 Reply Format", format_list,
+                                  index=format_list.index(ss[chat_key(active_ci, "format_name")]),
+                                  key="sidebar_format")
 
     st.divider()
-    
-    # Options section
+
+    # Options
     st.subheader("⚙️ Options")
-    translate_in = st.selectbox("🌐 Translate to", ["none", "English", "French", "Japanese", "Italian", "Spanish"])
-    instructions = st.text_input("📋 Additional Instructions")
-    
+    translate_in   = st.selectbox("🌐 Translate to", ["none", "English", "French", "Japanese", "Italian", "Spanish"])
+    instructions   = st.text_input("📋 Additional Instructions")
+
     col1, col2 = st.columns(2)
-    play_audio_ = col1.checkbox('🔊 Audio', value=False)
-    copy_reply_ = col2.checkbox('📋 Copy', value=False)
-    run_code = col1.checkbox('⚡ Run Code', value=False)
-    use_smol_agents = col2.checkbox('🤖 Agentic AI', value=False)
-    
-    # Show Agentic AI info when enabled
+    play_audio_     = col1.checkbox('🔊 Audio',    value=False)
+    copy_reply_     = col2.checkbox('📋 Copy',     value=False)
+    run_code        = col1.checkbox('⚡ Run Code', value=False)
+    use_smol_agents = col2.checkbox('🤖 Agentic',  value=False)
     if use_smol_agents:
-        st.info("🤖 **Agentic AI enabled**: AI will use web search, code execution, and multi-step reasoning for complex tasks.")
-    # if col2.button("Copy Reply"):
-    #     pc.copy(ss[reply])
+        st.info("🤖 Agentic AI: uses web search, code execution, and multi-step reasoning.")
 
-    # Update session state with the selected value
-    ss[assistant_name] = get_assistant
-    ss[format_name] = get_format
-    ss[model_name] = model
-    
-    # Build assistant with updated values
-    ss['assistant'] = assistants[ss[assistant_name]] + features['reply_style'][ss[format_name]]
-    
-    # Update assistant in chat thread
-    ss[chat_n] = update_assistant(ss[chat_n])
-    
-    st.divider()
-    
-    # File uploads section
-    st.subheader("📁 File Uploads")
-    
-    image_path = None
-    def encode_image(image_path):
-        with open(image_path, "rb") as image_file:
-            return base64.b64encode(image_file.read()).decode('utf-8')
-        
-    uploaded_image = st.file_uploader("🖼️ Upload Image", type=("jpg", "png", "jpeg"))
-    def encode_ioimage(uploaded_image):
-        image_data = uploaded_image.read()
-        return base64.b64encode(image_data).decode("utf-8")
+    user_avi = st.selectbox('👤 Avatar', ['🧑🏻','🧔🏻','👩🏻','👧🏻','👸🏻','👱🏻‍♂️','🧑🏼','👸🏼','🧒🏽','👳🏽','👴🏼','🎅🏻'])
 
-    uploaded_file = st.file_uploader("📄 Upload Text", type=("txt", "md"))
-    
     st.divider()
-    
-    # Chat management
+
+    # File uploads
+    st.subheader("📁 Attachments")
+    uploaded_image = st.file_uploader("🖼️ Image", type=("jpg", "png", "jpeg"))
+    uploaded_file  = st.file_uploader("📄 Text",  type=("txt", "md"))
+
+    st.divider()
+
+    # Chat management (for active chat)
     st.subheader("💬 Chat Management")
     col12, col22 = st.columns(2)
-    if col12.button("🗑️ Clear chat"):
-        clearchat()
+    if col12.button("🗑️ Clear"):
+        ass_content = assistants[get_assistant] + features['reply_style'][get_format]
+        ss[chat_key(active_ci, "messages")] = [{"role": "system", "content": ass_content}]
+        st.rerun()
     if col22.button("🧹 Clear sys"):
-        clearsys()
-    
-    user_avi = st.selectbox('👤 Your Avatar', ['🧑🏻', '🧔🏻', '👩🏻', '👧🏻', '👸🏻','👱🏻‍♂️','🧑🏼','👸🏼','🧒🏽','👳🏽','👴🏼', '🎅🏻', ])
+        ss[chat_key(active_ci, "messages")] = [
+            e for e in ss[chat_key(active_ci, "messages")] if e['role'] != 'system'
+        ]
+        st.rerun()
 
-    # Chat save/load section
-    st.subheader("💾 Save/Load Chats")
+    # Save/Load
+    st.subheader("💾 Save / Load")
     col_save, col_export = st.columns(2)
-    
     with col_save:
         if st.button("💾 Save"):
-            chat_name = save_chat_as_pickle()
-            st.success(f"✅ Chat saved as {chat_name}!")
-    
+            cname = save_chat_as_pickle(active_ci)
+            st.success(f"Saved: {cname}")
     with col_export:
         if st.button("📤 Export"):
-            markdown_export = export_chat_as_markdown()
-            st.download_button(
-                label="⬇️ Download",
-                data=markdown_export,
-                file_name=f"chat_export_{get_assistant}_{time.strftime('%Y%m%d_%H%M%S')}.md",
-                mime="text/markdown"
-            )
+            md_export = export_chat_as_markdown(active_ci)
+            st.download_button("⬇️ .md", data=md_export,
+                               file_name=f"chat_{get_assistant}_{time.strftime('%Y%m%d_%H%M%S')}.md",
+                               mime="text/markdown")
 
-    # Add a button to export chat
-    # st.caption("📤 Export Chat")
-    # if st.button("📤 Export Chat"):
-    #     markdown = export_chat_as_markdown()
-    #     # Create a download link for the user
-    #     st.download_button(
-    #         label="Download Markdown",
-    #         data=markdown,
-    #         file_name="chat_export.md",
-    #         mime="text/markdown",
-    #     )
-
-    # List files in the 'chats/' directory
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'chats'))
-    files_in_chats = os.listdir(base_dir) if os.path.exists(base_dir) else (os.makedirs(base_dir, exist_ok=True), [])[1]
-    if len(files_in_chats) == 0:
+    files_in_chats = os.listdir(base_dir) if os.path.exists(base_dir) else []
+    if not files_in_chats:
         files_in_chats = ["No chats available"]
+    chat_path_sel = st.selectbox("📂 Saved chats", files_in_chats)
+    full_path = os.path.join('chats/', chat_path_sel)
 
-    chat_path = st.selectbox("📂 Available chats", files_in_chats)
-    full_path = os.path.join('chats/', chat_path)
-
-    col1, col2 = st.columns(2)
-    if col1.button("📥 Load"):
-        if chat_path != "No chats available":
-            ss[chat_n] = load_chat_from_pickle(full_path)
-            st.success("✅ Chat loaded!")
+    col_load, col_del = st.columns(2)
+    if col_load.button("📥 Load"):
+        if chat_path_sel != "No chats available":
+            ss[chat_key(active_ci, "messages")] = load_chat_from_pickle(full_path)
+            st.success("Loaded!")
         else:
-            st.warning("⚠️ No chats to load")
-
-    if col2.button("🗑️ Delete"):
-        if chat_path != "No chats available":
+            st.warning("Nothing to load")
+    if col_del.button("🗑️ Delete"):
+        if chat_path_sel != "No chats available":
             delete_file(full_path)
-            st.success("✅ Chat deleted!")
+            st.success("Deleted!")
         else:
-            st.warning("⚠️ No chats to delete")
-    
+            st.warning("Nothing to delete")
+
     st.divider()
-    
-    # Info and links
-    st.subheader("ℹ️ Information")
-    Info = st.button("📖 Show Help")
-    
-    st.markdown("🔗 **Useful Links:**")
-    st.markdown("- [Get OpenAI API key](https://platform.openai.com/account/api-keys)")
-    st.markdown("- [View source code](https://github.com/johndef64/mychatbot)")
 
-############################################################################################
-############################################################################################
+    # Info
+    Info = st.button("📖 Help")
+    st.markdown("- [OpenAI keys](https://platform.openai.com/account/api-keys)")
+    st.markdown("- [Source code](https://github.com/johndef64/mychatbot)")
 
-# <<<<<<<<<<<< >>>>>>>>>>>>>
+# ─── Apply sidebar selections to active chat ──────────────────────────────────
+ss[chat_key(active_ci, "assistant_name")] = get_assistant
+ss[chat_key(active_ci, "format_name")]    = get_format
+ss[chat_key(active_ci, "model_name")]     = selected_model
 
-def add_instructions(instructions):
-    if not any(entry.get("role") == "system" and instructions in entry.get("content", "") 
-           for entry in ss[chat_n]):
-        ss[chat_n].append({"role": "system", "content": instructions})
+ass_content = assistants[get_assistant] + features['reply_style'][get_format]
+ss["assistant"] = ass_content
+ss[chat_key(active_ci, "messages")] = update_assistant_in_chat(
+    ss[chat_key(active_ci, "messages")], ass_content,
+    ss[chat_key(active_ci, "sys_addings")]
+)
 
-### Add Context to system
+# Apply instructions / file uploads
 if instructions:
-   #add_instructions(instructions)
-   ss[sys_addings].append(instructions)
+    ss[chat_key(active_ci, "sys_addings")].append(instructions)
 
 if uploaded_file:
     text = uploaded_file.read().decode()
-    ss[chat_n].append({"role": "system", "content": "Read the text below and add it's content to your knowledge:\n\n"+text})
+    ss[chat_key(active_ci, "messages")].append(
+        {"role": "system", "content": "Read the text below and add it to your knowledge:\n\n" + text}
+    )
 
-#if uploaded_file:
-#image = uploaded_image.read().decode()
-#ss[chat_n] = ...
+# ─── Main area ────────────────────────────────────────────────────────────────
+st.title("🤖 MyChatbot v2.0")
+st.caption("Multi-AI Assistant · OpenAI · Anthropic · Google · Alibaba · DeepSeek · xAI · Groq")
 
-# # Update session state with the selected value
-# ss[assistant_name] = get_assistant
-# ss["format_name"] = get_format
-
-
-# <<<<<<<<<<<<Display header>>>>>>>>>>>>>
-
-st.title("🤖 MyChatbot v1.0")
-st.caption("🚀 Multi-AI Assistant powered by OpenAI, DeepSeek, Grok, Groq & Anthropic")
-
-# Add a nice header with model info
-# Model status indicator
-model_status_map = {
-    "gpt": "🟢 OpenAI",
-    "deepseek": "🔵 DeepSeek", 
-    "grok": "🟡 xAI",
-    "claude": "🟣 Anthropic",
-    "llama": "🟠 Meta",
-    "gemma": "🔴 Google",
-    "mistral": "⚪ Mistral"
-}
-
-model_provider = "❓ Unknown"
-for key, value in model_status_map.items():
-    if key in model.lower():
-        model_provider = value
-        break
-
-col1, col2, col3 = st.columns([2,1,1])
-with col1:
-    st.markdown(f"**Current Model:** `{model}`") #({model_provider})
-with col2:
-    st.markdown(f"**Assistant:** `{get_assistant}`")
-with col3:
-    st.markdown(f"**Format:** `{get_format}`")
-
-st.divider()
-
-# Draft information formatted within an info box
-info = """#### Quick Commands:
-- Start message with "+" to add message without getting a reply
-- Start message with "++" to add additional system instructions
-- Enter ":" to pop out last iteration
-- Enter '-' to clear chat
-"""
-# Display the info box using Streamlit's 'info' function
-# st.info(info)
-
-AssistantInfo = """
-#### Copilots 💻
-- **Base**: Assists with basic tasks and functionalities.
-- **Novelist**: Specializes in creative writing assistance.
-- **Creator**: Aids in content creation and ideation.
-- **Fixer**: Can fix any text based on the context.
-- **Delamain**: Coding copilot for every purpose.
-- **Oracle**: Coding copilot for every purpose.
-- **Snake**: Python coding copilot for every purpose.
-- **Roger**: R coding copilot for every purpose.
-
-#### Scientific 🔬
-- **Leonardo**: Supports scientific research activities.
-- **Newton**: Aids in Python-based scientific computations (Python).
-- **Galileo**: Specializes in scientific documentation (Markdown).
-- **Mendel**: Assists with data-related scientific tasks.
-- **Watson**: Focuses on typesetting scientific documents (LaTeX).
-- **Venter**: Supports bioinformatics and coding tasks (Python).
-- **Crick**: Specializes in structuring scientific content (Markdown).
-- **Darwin**: Aids in evolutionary biology research tasks.
-- **Dawkins**: Supports documentation and writing tasks (Markdown).
-- **Penrose**: Assists in theoretical research fields.
-- **Turing**: Focuses on computational and AI tasks (Python).
-- **Marker**: Specializes in scientific documentation (Markdown).
-- **Collins**: Aids in collaborative scientific projects.
-- **Elsevier**: Focuses on publication-ready document creation (LaTeX).
-- **Springer**: Specializes in academic content formatting (Markdown).
-
-#### Characters 🎭
-- **Julia**: Provides character-based creative support.
-- **Mike**: Provides character-based interactive chat.
-- **Michael**: Provides character-based interactive chat (English).
-- **Miguel**: Provides character-based interactive chat (Portuguese).
-- **Francois**: Provides character-based interactive chat (French).
-- **Luca**: Provides character-based interactive chat (Italian).
-- **Hero**: Provides character-based interactive chat (Japanese).
-- **Yoko**: Provides character-based creative support (Japanese).
-- **Xiao**: Provides character-based creative support (Chinese).
-- **Peng**: Provides character-based interactive chat (Chinese).
-
-#### Languages 🌐
-- **English, French, Italian, Portuguese**
-- **Chinese**: Facilitates Chinese language learning.
-- **Japanese**: Aids in Japanese language learning and translation.
-- **Japanese Teacher**: Specializes in teaching Japanese.
-- **Portuguese Teacher**: Provides assistance with learning Portuguese.
-
-"""
-
-# Quick Commands info box with better formatting
-if Info:
-    st.success("🚀 **Quick Commands Guide**")
-    
-    with st.expander("⚡ Command Shortcuts", expanded=True):
-        st.markdown("""
-        | Command | Action |
-        |---------|--------|
-        | `+message` | Add message without AI reply |
-        | `++instruction` | Add system instruction |
-        | `.` | Remove last message  |
-        | `-` or `@` | Clear entire chat |
-        """)
-    
-    with st.expander("🤖 Available Assistants", expanded=False):
-        st.markdown(AssistantInfo)
-        
-    with st.expander("🎯 Pro Tips", expanded=False):
-        st.markdown("""
-        - **Multi-modal**: Upload images and text files for context
-        - **Translation**: Automatic translation to any supported language
-        - **Voice**: Enable text-to-speech for responses
-        - **Code Execution**: Run Python code directly from responses
-        - **🤖 Smol Agents**: Enable autonomous AI agents with web search, code execution, and multi-step reasoning
-        - **Chat Management**: Save/load conversations for later use
-        """)
-        
-        with st.expander("🤖 Smol Agents Details", expanded=False):
-            st.markdown("""
-            **Autonomous AI Agent System**
-            
-            When enabled, the AI uses specialized agents for:
-            - 🔍 **Web Research**: Real-time information gathering
-            - 🐍 **Code Tasks**: Write, test, and execute Python code
-            - 📊 **Data Analysis**: Process datasets and create visualizations
-            - 🔧 **Complex Problem Solving**: Multi-step reasoning with tool usage
-            
-            **Example queries that work great with Smol Agents:**
-            - "Research the latest AI developments and summarize"
-            - "Create a Python script to analyze sales data"
-            - "Find current stock prices and plot a comparison chart"
-            - "Search for climate change news and create an analysis"
-            """)
-else:
-    # Show compact help hint
-    if "header_info" not in ss:
-        st.info("ℹ️ **Quick Commands**: Type `+message` to add without reply, `++instruction` for system prompts, `.` to remove last message, `-` or `@` to clear chat")
-        ss.header_info = True
-# <<<<<<<<<<<< >>>>>>>>>>>>>
-
-
-# Update Language Automatically
-#if ss.persona not in ss[chat_n]:
-#    ss[chat_n] = update_assistant(ss[chat_n])
-
-voice = voice_dict.get(get_assistant, "echo")
-chatbot_avi = avatar_dict.get(get_assistant, "🤖")
-
-print("Voice:", voice)
-
-
-
-# Trigger the specific function based on the selection
-#if assistant and not ss[chat_n] == [{"role": "system", "content": assistants[assistant]}]:
-#    ss[chat_n] = [{"role": "system", "content": assistants[assistant]}]
-#    #st.write('assistant changed')
-
-
-# <<<<<<<<<<<<Display chat>>>>>>>>>>>>>
-def display_chat():
-    for msg in ss[chat_n]:
-        if msg['role'] != 'system':
-            if not isinstance(msg["content"], list):
-                # Avatar
-                if msg["role"] == 'user':
-                    avatar = user_avi
-                else:
-                    avatar = chatbot_avi
-                st.chat_message(msg["role"], avatar=avatar).write(msg["content"])
-
-display_chat()
-
-
-def strip_think_tag(input_string):
-    # Trova la parte all'interno dei tag <think>
-    pattern = r"<think>(.*?)</think>"
-    think_part = re.findall(pattern, input_string, re.DOTALL)
-    # Rimuovi la parte <think> dalla stringa originale
-    senza_think = re.sub(pattern, '', input_string, flags=re.DOTALL).strip()
-    # Rimuovi eventuali spazi aggiuntivi
-    think_part = think_part[0].strip() if think_part else ''
-    return senza_think, think_part
-
-# <<<<<<<<<<<<Engage chat>>>>>>>>>>>>>
-
-# Enhanced quick commands with better UX
-if prompt := st.chat_input("Type your message here... (use @ to clear, + to add without reply)"):
-    # Quick commands with better feedback:
-    if prompt in ["-", "@"]:
-        clearchat()
-        st.balloons()  # Fun feedback
-        time.sleep(0.7)
-        st.rerun()
-
-    elif prompt.startswith("+"):
-        prompt = prompt[1:]
-        role = "user"
-        if prompt.startswith("+"):
-            prompt = prompt[1:]
-            role = "system"
-
-        if role == "system":
-            ss[sys_addings].append(prompt)
-            st.success("✅ System instruction added!")
-            time.sleep(1)
+# ─── Multi-chat tabs ──────────────────────────────────────────────────────────
+# Chat tab controls
+ctrl_col1, ctrl_col2, ctrl_col3 = st.columns([1, 1, 4])
+with ctrl_col1:
+    if ss["num_chats"] < MAX_CHATS:
+        if st.button("➕ New Chat"):
+            new_i = ss["num_chats"]
+            ss["num_chats"] += 1
+            init_chat(new_i)
+            ss["active_chat"] = new_i
             st.rerun()
-        else:
-            ss[chat_n].append({"role": role, "content": prompt})
-            st.chat_message(role, avatar=user_avi).write(prompt)
-            st.info("📝 Message added without AI response")
-
-    elif prompt in [".", "undo", "back"]:
-        if len(ss[chat_n]) > 1:
-            remove_last_non_system(ss[chat_n])
-            st.success("↩️ Last message pair removed")
-            time.sleep(1)
+with ctrl_col2:
+    if ss["num_chats"] > 1:
+        if st.button("✖ Close Chat"):
+            close_i = ss["active_chat"]
+            # Shift chats down
+            for i in range(close_i, ss["num_chats"] - 1):
+                for k in ["assistant_name","format_name","model_name","messages","sys_addings","reply","title"]:
+                    ss[chat_key(i, k)] = ss[chat_key(i+1, k)]
+            # Clear last
+            last = ss["num_chats"] - 1
+            for k in ["assistant_name","format_name","model_name","messages","sys_addings","reply","title"]:
+                if chat_key(last, k) in ss:
+                    del ss[chat_key(last, k)]
+            ss["num_chats"] -= 1
+            ss["active_chat"] = min(ss["active_chat"], ss["num_chats"] - 1)
             st.rerun()
+
+# Build tab labels
+tab_labels = [ss[chat_key(i, "title")] for i in range(ss["num_chats"])]
+tabs = st.tabs(tab_labels)
+
+for tab_i, tab in enumerate(tabs):
+    with tab:
+        if tab_i != ss["active_chat"]:
+            # Clicking a different tab: update active_chat and rerun
+            if st.button(f"Switch to {tab_labels[tab_i]}", key=f"switch_{tab_i}"):
+                ss["active_chat"] = tab_i
+                st.rerun()
+            # Show a preview of the last message
+            msgs_preview = ss[chat_key(tab_i, "messages")]
+            non_sys = [m for m in msgs_preview if m['role'] != 'system']
+            if non_sys:
+                last_msg = non_sys[-1]
+                preview = str(last_msg['content'])[:120] + ("…" if len(str(last_msg['content'])) > 120 else "")
+                st.caption(f"**{last_msg['role']}**: {preview}")
+            else:
+                st.caption("*Empty chat*")
+            continue
+
+        # ── This is the active tab ──────────────────────────────────────────
+        ci = tab_i
+        model    = ss[chat_key(ci, "model_name")]
+        messages = ss[chat_key(ci, "messages")]
+
+        voice       = voice_dict.get(ss[chat_key(ci, "assistant_name")], "echo")
+        chatbot_avi = avatar_dict.get(ss[chat_key(ci, "assistant_name")], "🤖")
+
+        # Model/assistant info bar
+        info_col1, info_col2, info_col3 = st.columns([3, 2, 2])
+        with info_col1:
+            st.markdown(f"**Model:** `{model}`")
+        with info_col2:
+            st.markdown(f"**Assistant:** `{ss[chat_key(ci, 'assistant_name')]}`")
+        with info_col3:
+            # Editable chat title
+            new_title = st.text_input("Chat name", value=ss[chat_key(ci, "title")],
+                                       key=f"title_input_{ci}", label_visibility="collapsed")
+            ss[chat_key(ci, "title")] = new_title
+
+        # Help
+        if Info:
+            st.success("🚀 Quick Commands")
+            with st.expander("⚡ Commands", expanded=True):
+                st.markdown("""
+| Command | Action |
+|---------|--------|
+| `+message` | Add message without AI reply |
+| `++instruction` | Add system instruction |
+| `.` | Remove last message |
+| `-` or `@` | Clear entire chat |
+""")
+            with st.expander("🤖 Assistants"):
+                st.markdown("""
+**Copilots**: base, creator, fixer, novelist, delamain, oracle, snake, roger
+**Science**: leonardo, galileo, newton, mendel, watson, crick, venter, darwin, dawkins, penrose, turing
+**Characters**: julia, mike, michael, miguel, francois, luca, hero, yoko, xiao, peng
+**Languages**: english, french, italian, spanish, portuguese, korean, chinese, japanese
+""")
         else:
-            st.warning("⚠️ No messages to remove")
+            if f"hint_{ci}" not in ss:
+                st.info("ℹ️ **Quick Commands**: `+message` add without reply · `++instruction` system prompt · `.` undo · `-` clear")
+                ss[f"hint_{ci}"] = True
 
-    else:
-        if not ss.openai_api_key:
-            st.info("Please add your OpenAI API key to continue.")
-            st.stop()
-            
+        # Display chat
+        for msg in messages:
+            if msg['role'] != 'system':
+                if not isinstance(msg["content"], list):
+                    avatar = user_avi if msg["role"] == 'user' else chatbot_avi
+                    st.chat_message(msg["role"], avatar=avatar).write(msg["content"])
 
-        if image_path or uploaded_image:
-            # if image_path:
-            #     if image_path.startswith('http'):
-            #         print('<Image path:',image_path, '>')
-            #     pass
-            # else:
-            print('<Enconding Image...>')
-            if uploaded_image:
-                base64_image = encode_ioimage(uploaded_image)
-            else:
-                base64_image = encode_image(image_path)
+        # Chat input
+        prompt = st.chat_input("Type your message… (@ to clear, + to add without reply)", key=f"chat_input_{ci}")
 
-                
-            image_path = f"data:image/jpeg;base64,{base64_image}"
+        if prompt:
+            if prompt in ["-", "@"]:
+                ass_c = assistants[ss[chat_key(ci, "assistant_name")]] + features['reply_style'][ss[chat_key(ci, "format_name")]]
+                ss[chat_key(ci, "messages")] = [{"role": "system", "content": ass_c}]
+                st.balloons()
+                time.sleep(0.5)
+                st.rerun()
 
-            image_add = {"role": 'user',
-                        "content": [{"type": "image_url", "image_url": {"url": image_path} }] }
-            if image_add not in ss[chat_n]:
-                ss[chat_n].append(image_add)
-
-        #client = OpenAI(api_key=ss.openai_api_key)
-        client = select_client(model)
-        
-        # change model if model is not multimodal
-        if image_path:
-            if model in gpt_models:
-                pass
-            elif model in x_models:
-                model = "grok-2-vision-1212"
-        
-        # Get User Prompt:
-        ss[chat_n].append({"role": "user", "content": prompt})
-        st.chat_message('user', avatar=user_avi).write(prompt)
-        
-        # Build Chat Thread
-        chat_thread = []
-        for msg in ss[chat_n]:
-            if isinstance(msg["content"], list):
-                chat_thread.append(msg)
-            elif not msg["content"].startswith('<<'):
-                chat_thread.append(msg)
-
-
-
-
-        # Generate Reply        
-        try:
-            # Check if we should use Smol Agents (based on checkbox)
-            if use_smol_agents:
-                # Import Smol Agents functions
-                from utils import smol_agents, smol_research_task, smol_code_task, smol_web_search
-                
-                # Determine task type and use appropriate agent
-                query_lower = prompt.lower()
-                
-                # Enhanced task detection
-                web_keywords = ['search', 'find', 'research', 'current', 'latest', 'news', 'what is', 'who is', 'when', 'where', 'information about']
-                code_keywords = ['code', 'python', 'script', 'program', 'function', 'algorithm', 'calculate', 'plot', 'graph', 'analyze data', 'visualization']
-                research_keywords = ['analyze', 'compare', 'study', 'investigation', 'report', 'summary', 'comprehensive', 'detailed analysis']
-                
-                # Determine best agent approach
-                if any(keyword in query_lower for keyword in code_keywords):
-                    st.info("🐍 Using Code Agent for programming tasks...")
-                    reply = smol_code_task(prompt, model)
-                elif any(keyword in query_lower for keyword in research_keywords):
-                    st.info("🔬 Using Research Agent for comprehensive analysis...")
-                    reply = smol_research_task(prompt, model)
-                elif any(keyword in query_lower for keyword in web_keywords):
-                    st.info("🔍 Using Web Search Agent...")
-                    reply = smol_web_search(prompt, model)
+            elif prompt.startswith("+"):
+                prompt = prompt[1:]
+                role = "user"
+                if prompt.startswith("+"):
+                    prompt = prompt[1:]
+                    role = "system"
+                if role == "system":
+                    ss[chat_key(ci, "sys_addings")].append(prompt)
+                    st.success("✅ System instruction added!")
+                    time.sleep(0.8)
+                    st.rerun()
                 else:
-                    # Use general agent with multiple tools for complex tasks
-                    st.info("🤖 Using Multi-Tool Agent...")
-                    reply = smol_agents(prompt, model) 
+                    ss[chat_key(ci, "messages")].append({"role": role, "content": prompt})
+                    st.chat_message(role, avatar=user_avi).write(prompt)
+                    st.info("📝 Message added without AI response")
 
-                # Add indicator that this was generated by Agentic AI
-                reply = f"🤖 **Agent Response**\n\n{reply}\n\n---\n*Generated using autonomous AI agents with web search, code execution, and analysis capabilities.*"
-                
+            elif prompt in [".", "undo", "back"]:
+                if len(messages) > 1:
+                    remove_last_non_system(ss[chat_key(ci, "messages")])
+                    st.success("↩️ Last message removed")
+                    time.sleep(0.7)
+                    st.rerun()
+                else:
+                    st.warning("⚠️ Nothing to remove")
+
             else:
-                # Regular chat completion for standard responses
-                response = client.chat.completions.create(
-                    model=model,
-                    messages=chat_thread,
-                    max_tokens=get_max_tokens(model),
-                    stream=False,
-                    #top_p=1,
-                    #frequency_penalty=0,
-                    #presence_penalty=0
-                )
+                if not ss.openai_api_key and not ss.groq_api_key and not ss.anthropic_api_key:
+                    st.info("Please add an API key in the sidebar.")
+                    st.stop()
 
-                reply = response.choices[0].message.content
-            
-        except Exception as e:
-            st.error(f"❌ Error generating response: {str(e)}")
-            st.info("💡 Try switching to a different model or check your API keys")
-            st.stop()
+                # Handle image upload
+                image_path = None
+                if uploaded_image:
+                    print('<Encoding Image...>')
+                    base64_image = encode_ioimage(uploaded_image)
+                    image_path = f"data:image/jpeg;base64,{base64_image}"
+                    image_add = {"role": 'user',
+                                 "content": [{"type": "image_url", "image_url": {"url": image_path}}]}
+                    if image_add not in ss[chat_key(ci, "messages")]:
+                        ss[chat_key(ci, "messages")].append(image_add)
 
-        reply, chain_of_thoughts = strip_think_tag(reply)
-        if len(chain_of_thoughts) > 3:
-            with st.expander("🧠 Chain of Thoughts", expanded=False):
-                st.write(chain_of_thoughts)
-        ss[reply] = reply
+                client = select_client(model)
 
-        # Opt out image from context
-        if uploaded_image:
-            # Sostituisci se l'ultimo messaggio è multimodale
-            # Filtra e rimuovi tutti i messaggi che contengono una parte con tipo "image_url"
-            ss[chat_n] = [
-                msg for msg in ss[chat_n]
-                if not (
-                    isinstance(msg.get("content"), list)
-                    and any(part.get("type") == "image_url" for part in msg["content"])
-                )
-            ]
-            print(ss[chat_n])
+                # Add user message
+                ss[chat_key(ci, "messages")].append({"role": "user", "content": prompt})
+                st.chat_message('user', avatar=user_avi).write(prompt)
 
+                # Build thread (strip internal markers)
+                chat_thread = []
+                for msg in ss[chat_key(ci, "messages")]:
+                    if isinstance(msg["content"], list):
+                        chat_thread.append(msg)
+                    elif not str(msg["content"]).startswith('<<'):
+                        chat_thread.append(msg)
 
-        # Append Reply
-        ss[chat_n].append({"role": "assistant", "content": reply})
-        st.chat_message('assistant', avatar=chatbot_avi).write(reply)
-        
+                # Generate reply
+                try:
+                    if use_smol_agents:
+                        from utils import smol_agents, smol_research_task, smol_code_task, smol_web_search
+                        q = prompt.lower()
+                        web_kw  = ['search','find','research','current','latest','news','what is','who is']
+                        code_kw = ['code','python','script','function','algorithm','calculate','plot','graph']
+                        res_kw  = ['analyze','compare','study','report','summary','comprehensive']
+                        if any(k in q for k in code_kw):
+                            st.info("🐍 Code Agent...")
+                            reply = smol_code_task(prompt, model)
+                        elif any(k in q for k in res_kw):
+                            st.info("🔬 Research Agent...")
+                            reply = smol_research_task(prompt, model)
+                        elif any(k in q for k in web_kw):
+                            st.info("🔍 Web Search Agent...")
+                            reply = smol_web_search(prompt, model)
+                        else:
+                            st.info("🤖 Multi-Tool Agent...")
+                            reply = smol_agents(prompt, model)
+                        reply = f"🤖 **Agent Response**\n\n{reply}\n\n---\n*Autonomous AI agent.*"
+                    else:
+                        response = client.chat.completions.create(
+                            model=model,
+                            messages=chat_thread,
+                            max_tokens=get_max_tokens(model),
+                            stream=False,
+                        )
+                        reply = response.choices[0].message.content
 
-        if check_copy_paste() and copy_reply_:
-            pc.copy(ss[reply])
+                except Exception as e:
+                    st.error(f"❌ Error: {str(e)}")
+                    st.info("💡 Check your API key for the selected provider/model.")
+                    st.stop()
 
-        if save_log:
-            update_log(ss[chat_n][-2])
-            update_log(ss[chat_n][-1])
+                reply, chain_of_thoughts = strip_think_tag(reply)
+                if len(chain_of_thoughts) > 3:
+                    with st.expander("🧠 Chain of Thoughts", expanded=False):
+                        st.write(chain_of_thoughts)
 
-        if translate_in != 'none':
-            language = translate_in
-            reply_language = rileva_lingua(reply)
-            if reply_language == 'Japanese':
-                translator = create_jap_translator(language)
-            elif 'Chinese' in reply_language.split(" "):
-                translator = create_chinese_translator(language)
-            else:
-                translator = create_translator(language)
-            response_ = client.chat.completions.create(model=model,
-                                                    messages=[{"role": "system", "content": translator},
-                                                                {"role": "user", "content": reply}])
-            translation = "<<"+response_.choices[0].message.content+">>"
-            ss[chat_n].append({"role": "assistant", "content": translation})
-            st.chat_message('assistant').write(translation)
+                ss[chat_key(ci, "reply")] = reply
 
+                # Remove image from context after use
+                if uploaded_image:
+                    ss[chat_key(ci, "messages")] = [
+                        m for m in ss[chat_key(ci, "messages")]
+                        if not (isinstance(m.get("content"), list)
+                                and any(p.get("type") == "image_url" for p in m["content"]))
+                    ]
 
-        if play_audio_:
-            Text2Speech(reply, voice=voice)
+                ss[chat_key(ci, "messages")].append({"role": "assistant", "content": reply})
+                st.chat_message('assistant', avatar=chatbot_avi).write(reply)
 
-        if run_code:
-            from ExecuteCode import ExecuteCode
-            ExecuteCode(reply)
+                if check_copy_paste() and copy_reply_:
+                    pc.copy(ss[chat_key(ci, "reply")])
 
+                if save_log:
+                    update_log(ss[chat_key(ci, "messages")][-2])
+                    update_log(ss[chat_key(ci, "messages")][-1])
 
+                if translate_in != 'none':
+                    language = translate_in
+                    reply_language = rileva_lingua(reply)
+                    if reply_language == 'Japanese':
+                        translator = create_jap_translator(language)
+                    elif 'Chinese' in reply_language.split(" "):
+                        translator = create_chinese_translator(language)
+                    else:
+                        translator = create_translator(language)
+                    resp_t = client.chat.completions.create(
+                        model=model,
+                        messages=[{"role": "system", "content": translator},
+                                  {"role": "user", "content": reply}]
+                    )
+                    translation = "<<" + resp_t.choices[0].message.content + ">>"
+                    ss[chat_key(ci, "messages")].append({"role": "assistant", "content": translation})
+                    st.chat_message('assistant').write(translation)
 
-    #with col2:
-    #    if st.button("New Chat"):
-    #    clearchat()
+                if play_audio_:
+                    Text2Speech(reply, voice=voice)
 
-
-
-
-
-
-#%%
-
-# Chat statistics
-print_stats = False
-if len(ss[chat_n]) > 1 and print_stats:
-    user_messages = len([msg for msg in ss[chat_n] if msg['role'] == 'user'])
-    assistant_messages = len([msg for msg in ss[chat_n] if msg['role'] == 'assistant'])
-    
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("💬 Total Messages", user_messages + assistant_messages)
-    with col2:
-        st.metric("👤 Your Messages", user_messages)
-    with col3:
-        st.metric("🤖 AI Responses", assistant_messages)
-    with col4:
-        if assistant_messages > 0:
-            avg_length = sum(len(msg['content']) for msg in ss[chat_n] if msg['role'] == 'assistant') // assistant_messages
-            st.metric("📊 Avg Response Length", f"{avg_length} chars")
-    
-    st.divider()
-
-def export_chat_as_markdown():
-    """Export current chat as markdown format"""
-    if len(ss[chat_n]) <= 1:
-        return "# Empty Chat\n\nNo messages to export."
-    
-    markdown_content = f"# Chat Export - {get_assistant}\n\n"
-    markdown_content += f"**Model:** {model}\n"
-    markdown_content += f"**Assistant:** {get_assistant}\n"
-    markdown_content += f"**Export Date:** {time.strftime('%Y-%m-%d %H:%M:%S')}\n\n"
-    markdown_content += "---\n\n"
-    
-    for i, msg in enumerate(ss[chat_n]):
-        if msg['role'] == 'user':
-            markdown_content += f"## 👤 User\n\n{msg['content']}\n\n"
-        elif msg['role'] == 'assistant':
-            markdown_content += f"## 🤖 {get_assistant}\n\n{msg['content']}\n\n"
-        elif msg['role'] == 'system':
-            markdown_content += f"*System: {msg['content']}*\n\n"
-    
-    return markdown_content
-
-
-
-
+                if run_code:
+                    from ExecuteCode import ExecuteCode
+                    ExecuteCode(reply)

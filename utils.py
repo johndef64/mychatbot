@@ -253,63 +253,77 @@ deepseek_models_dict = {
 deepseek_models = list(deepseek_models_dict.keys())
 
 x_models = [
-    # "grok-2-1212", 
-    # 'grok-2-vision-1212', 
     "grok-2-latest",
     "grok-3",
+    "grok-3-mini",
     "grok-4",
     ]
-aiml_models = [
-    # "cognitivecomputations/dolphin-2.5-mixtral-8x7", 
-    # "qwen-turbo"
-    ]
+aiml_models = []
 groq_models = [
     "gemma2-9b-it",
     "llama-3.3-70b-versatile",
-    # "llama-3.1-8b-instant",
-    # "llama-guard-3-8b",
-    # "llama3-70b-8192",
-    # "llama3-8b-8192",
-    # "whisper-large-v3",
-    # "whisper-large-v3-turbo",
-    # "distil-whisper-large-v3-en",
-    # "allam-2-7b",
     "deepseek-r1-distill-llama-70b",
     "meta-llama/llama-4-maverick-17b-128e-instruct",
     "meta-llama/llama-4-scout-17b-16e-instruct",
-    "meta-llama/llama-guard-4-12b",
-    "openai/gpt-oss-20b",
-    "openai/gpt-oss-120b",
     "moonshotai/kimi-k2-instruct-0905",
     "mistral-saba-24b",
-    # "playai-tts",
-    # "playai-tts-arabic",
     "qwen-qwq-32b",
-    #"compound-beta",
-    #"compound-beta-mini",
 ]
 anthropic_models = [
-    "claude-opus-4-0",          
-    "claude-sonnet-4-0",        
-    "claude-3-7-sonnet-latest", 
-    "claude-3-5-sonnet-latest", 
-    "claude-3-5-haiku-latest",  
-    "claude-3-opus-latest"
-        
-    ]
+    "claude-opus-4-5",
+    "claude-sonnet-4-5",
+    "claude-opus-4-0",
+    "claude-sonnet-4-0",
+    "claude-3-7-sonnet-latest",
+    "claude-3-5-sonnet-latest",
+    "claude-3-5-haiku-latest",
+]
 
-openrouter_models = [   
+google_models = [
+    "gemini-2.5-pro-preview-06-05",
+    "gemini-2.5-flash-preview-05-20",
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-lite",
+    "gemini-1.5-pro",
+    "gemini-1.5-flash",
+]
+
+alibaba_models = [
+    "qwen-plus",
+    "qwen-turbo",
+    "qwen-max",
+    "qwen3-235b-a22b",
+    "qwen3-30b-a3b",
+    "qwen3-32b",
+    "qwen3-14b",
+    "qwq-32b",
+    "qwen-coder-plus",
+    "qwen2.5-coder-32b-instruct",
+]
+
+openrouter_models = [
     "cognitivecomputations/dolphin3.0-mistral-24b:free",
     "cognitivecomputations/dolphin3.0-mistral-24b",
-    # "cognitivecomputations/dolphin3.0-r1-mistral-24b:free",
     "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
     "cognitivecomputations/dolphin-llama-3-70b",
     "thedrummer/cydonia-24b-v4.1",
-    "x-ai/grok-4-fast:free",
-    "x-ai/grok-4-fast"
+    "x-ai/grok-4",
+    "minimax/minimax-m2.1",
     ]
 
 openai_compliant = gpt_models_full + deepseek_models + x_models + aiml_models + groq_models + openrouter_models #+ anthropic_models
+
+# Grouped models dict for UI (provider -> model list)
+models_by_provider = {
+    "OpenAI":      gpt_models,
+    "Anthropic":   anthropic_models,
+    "Google":      google_models,
+    "Alibaba":     alibaba_models,
+    "DeepSeek":    deepseek_models,
+    "xAI (Grok)":  x_models,
+    "Groq":        groq_models,
+    "OpenRouter":  openrouter_models,
+}
 
 
 ####### Image Models #######
@@ -336,29 +350,35 @@ TTS HD	$0.030 / 1K characters
 ##### Parameters ######
 
 # General parameters
-api_models = gpt_models_full + deepseek_models + x_models + groq_models + anthropic_models + openrouter_models
+api_models = gpt_models_full + deepseek_models + x_models + groq_models + anthropic_models + google_models + alibaba_models + openrouter_models
 
 def get_max_tokens(model):
     if model in ["claude-3-5-haiku-latest", "claude-3-5-sonnet-latest",
-                "gemma2-9b-it",  "llama-3.1-8b-instant",  "llama-guard-3-8b",   
+                "gemma2-9b-it",
                 "meta-llama/llama-4-maverick-17b-128e-instruct",
                 "meta-llama/llama-4-scout-17b-16e-instruct",
-                "mistral-saba-24b",]:
-    
+                "mistral-saba-24b",
+                "qwen-plus", "qwen-turbo", "qwen-max",
+                "qwen3-14b",]:
         return 8192
-    elif model in ["qwen-qwq-32b", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", 
-                    "o1-mini", "gpt-4o-mini", "gpt-4o"]:
+    elif model in ["qwen-qwq-32b", "qwq-32b", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano",
+                    "o1-mini", "gpt-4o-mini", "gpt-4o",
+                    "qwen3-32b", "qwen3-30b-a3b", "qwen3-235b-a22b",
+                    "qwen-coder-plus", "qwen2.5-coder-32b-instruct",]:
         return 32000
     elif model in ["deepseek-chat", "deepseek-reasoner",
-                    "llama-3.3-70b-versatile","deepseek-r1-distill-llama-70b", 
-                    "grok-2-latest", "grok-3","grok-4",]:
+                    "llama-3.3-70b-versatile","deepseek-r1-distill-llama-70b",
+                    "grok-2-latest", "grok-3", "grok-3-mini", "grok-4",]:
         return 20000
-    elif model in ["claude-opus-4-0", "claude-sonnet-4-0", "claude-3-7-sonnet-latest",]:
+    elif model in ["claude-opus-4-5", "claude-sonnet-4-5",
+                    "claude-opus-4-0", "claude-sonnet-4-0", "claude-3-7-sonnet-latest",]:
         return 20000
+    elif model in ["gemini-2.5-pro-preview-06-05", "gemini-2.5-flash-preview-05-20",
+                    "gemini-2.0-flash", "gemini-2.0-flash-lite",
+                    "gemini-1.5-pro", "gemini-1.5-flash",]:
+        return 32000
     elif model in ["moonshotai/kimi-k2-instruct-0905"]:
         return 16300
-    elif model in ["meta-llama/llama-guard-4-12b", "openai/gpt-oss-20b","openai/gpt-oss-120b", "llama3-70b-versatile", "llama3-8b-instant",]:
-        return 131072
     else:
         return 8192
 
@@ -427,40 +447,22 @@ def load_json_from_lib(nome_file, local = False):
 openai_api_hash = b'gAAAAABnQFa7PhJzvEZmrHIbqIbXY67FYM0IhBaw8XOgnDurF5ij1oFYvNMikCpe8ebpqlRYYYOEDGuxuWdOkGPO74ljkWO07DVGCqW7KlzT6AJ0yv-0-5qTNeXTVzhorMP4RA5D8H2P73cmgwFr2Hlv6askLQjWGg=='
 
 def pass_api_keys():
-    #if simple_bool('Do you have an openai key? '):
-    openai_api_key = input('Provide here your OpenAI api key, if not leave blank:')
-    if openai_api_key == "":
-        print('Please, get your API-key at https://platform.openai.com/api-keys')
-        openai_api_key = "missing"
-
-    deepseek_api_key = input('Provide here your DeepSeek api key, if not leave blank:')
-    if deepseek_api_key == "":
-        print('Please, get your DeepSeek API-key')
-        deepseek_api_key = "missing"
-
-
-    x_api_key = input('Provide here your Grok api key, if not leave blank:')
-    if x_api_key == "":
-        print('Please, get your Grok API-key')
-        x_api_key = "missing"
-
-    #if simple_bool('Do you have an openai key? '):
-    gemini_api_key = input('Provide here your Gemini api key, if not leave blank:')
-    if gemini_api_key == "":
-        print('Please, get your Gemini API-key')
-        gemini_api_key = "missing"
-
-    groq_api_key = input('Provide here your Groq api key, if not leave blank:')
-    if groq_api_key == "":
-        print('Please, get your Groq API-key')
-        groq_api_key = "missing"
+    def ask(label, url=""):
+        val = input(f'Provide your {label} API key (leave blank to skip): ')
+        if val == "" and url:
+            print(f'Get your key at {url}')
+        return val if val else "missing"
 
     api_keys = {
-        "openai": openai_api_key,
-        "deepseek": deepseek_api_key,
-        "grok": x_api_key,
-        "gemini": gemini_api_key,
-        "groq": groq_api_key,
+        "openai":    ask("OpenAI",    "https://platform.openai.com/api-keys"),
+        "deepseek":  ask("DeepSeek",  "https://platform.deepseek.com"),
+        "grok":      ask("xAI/Grok",  "https://console.x.ai"),
+        "gemini":    ask("Gemini",    "https://aistudio.google.com/app/apikey"),
+        "googleai":  ask("Google AI Studio", "https://aistudio.google.com/app/apikey"),
+        "groq":      ask("Groq",     "https://console.groq.com/keys"),
+        "anthropic": ask("Anthropic", "https://console.anthropic.com/keys"),
+        "alibaba":   ask("Alibaba DashScope", "https://dashscope.console.aliyun.com"),
+        "openrouter":ask("OpenRouter","https://openrouter.ai/keys"),
     }
     save_json_in_lib(api_keys, "api_keys.json")
 
@@ -507,26 +509,38 @@ api_keys = load_api_keys()
 from groq import Groq
 
 
-# selct client
+# select client
 def select_client(model):
+    keys = load_api_keys()
     if model in gpt_models:
-        client = OpenAI(api_key=load_api_keys()["openai"])
+        client = OpenAI(api_key=keys["openai"])
     elif model in deepseek_models:
         print("using DeepSeek model")
-        client = OpenAI(api_key=load_api_keys()["deepseek"], base_url="https://api.deepseek.com")
-    # elif model in x_models:
-    elif "grok" in model:
-        print("using Xai model")
-        client = OpenAI(api_key=load_api_keys()["grok"], base_url="https://api.x.ai/v1")
-    elif model in groq_models: 
-        print("using Groq models")
-        client = Groq(api_key=load_api_keys()["groq"])
+        client = OpenAI(api_key=keys["deepseek"], base_url="https://api.deepseek.com")
+    elif "grok" in model or model in x_models:
+        print("using xAI model")
+        client = OpenAI(api_key=keys["grok"], base_url="https://api.x.ai/v1")
+    elif model in groq_models:
+        print("using Groq model")
+        client = Groq(api_key=keys["groq"])
     elif model in anthropic_models:
-        print("using Anthorpic models")
-        client = OpenAI(api_key=load_api_keys()["anthropic"],base_url="https://api.anthropic.com/v1")
+        print("using Anthropic model")
+        client = OpenAI(api_key=keys["anthropic"], base_url="https://api.anthropic.com/v1")
+    elif model in google_models:
+        print("using Google model")
+        client = OpenAI(api_key=keys.get("googleai", keys.get("gemini", "")),
+                        base_url="https://generativelanguage.googleapis.com/v1beta/openai/")
+    elif model in alibaba_models:
+        print("using Alibaba model")
+        client = OpenAI(api_key=keys.get("alibaba", ""),
+                        base_url="https://dashscope-intl.aliyuncs.com/compatible-mode/v1")
     elif model in openrouter_models:
-        print("using OpenRouter models")
-        client = OpenAI(api_key=load_api_keys()["openrouter"], base_url="https://openrouter.ai/api/v1")
+        print("using OpenRouter model")
+        client = OpenAI(api_key=keys.get("openrouter", ""), base_url="https://openrouter.ai/api/v1")
+    else:
+        # fallback: try OpenAI
+        print(f"[WARNING] Unknown model '{model}', falling back to OpenAI client")
+        client = OpenAI(api_key=keys["openai"])
     return client
 
 

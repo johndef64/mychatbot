@@ -10,3 +10,4 @@ chat_log.json
 api_keys.json
 mychatbot_v1.zip
 pages/chats/*
+pages/deprecated/*
