@@ -522,8 +522,22 @@ with st.sidebar:
         index=provider_names.index(default_provider),
         key="sidebar_provider"
     )
-    provider_models = models_by_provider[selected_provider]
-    default_model_idx = provider_models.index(current_model) if current_model in provider_models else 0
+    provider_models = list(models_by_provider[selected_provider])
+
+    # Custom model input — lets user type any model ID not in the list
+    custom_model = st.text_input(
+        "✏️ Custom model ID",
+        placeholder="e.g. gpt-4o-2024-08-06",
+        key="custom_model_input",
+        help="Type any model ID not in the list above to use it directly"
+    )
+    if custom_model:
+        if custom_model not in provider_models:
+            provider_models = [custom_model] + provider_models
+        default_model_idx = 0
+    else:
+        default_model_idx = provider_models.index(current_model) if current_model in provider_models else 0
+
     selected_model = st.selectbox(
         "🤖 Model",
         provider_models,
@@ -677,14 +691,26 @@ with ctrl_col2:
 tab_labels = [ss[chat_key(i, "title")] for i in range(ss["num_chats"])]
 tabs = st.tabs(tab_labels)
 
+# The active chat index drives everything; read it once here
+ci = ss.get("active_chat", 0)
+model       = ss[chat_key(ci, "model_name")]
+voice       = voice_dict.get(ss[chat_key(ci, "assistant_name")], "echo")
+chatbot_avi = avatar_dict.get(ss[chat_key(ci, "assistant_name")], "🤖")
+
+# ── Chat input is declared OUTSIDE the tabs so Streamlit anchors it to the
+#    bottom of the page, not in the middle of the tab content.
+prompt = st.chat_input(
+    "Type your message… (@ to clear, + to add without reply)",
+    key="chat_input_global"
+)
+
 for tab_i, tab in enumerate(tabs):
     with tab:
         if tab_i != ss["active_chat"]:
-            # Clicking a different tab: update active_chat and rerun
-            if st.button(f"Switch to {tab_labels[tab_i]}", key=f"switch_{tab_i}"):
+            # Non-active tab: show switch button + last message preview
+            if st.button(f"Switch here", key=f"switch_{tab_i}"):
                 ss["active_chat"] = tab_i
                 st.rerun()
-            # Show a preview of the last message
             msgs_preview = ss[chat_key(tab_i, "messages")]
             non_sys = [m for m in msgs_preview if m['role'] != 'system']
             if non_sys:
@@ -695,22 +721,14 @@ for tab_i, tab in enumerate(tabs):
                 st.caption("*Empty chat*")
             continue
 
-        # ── This is the active tab ──────────────────────────────────────────
-        ci = tab_i
-        model    = ss[chat_key(ci, "model_name")]
-        messages = ss[chat_key(ci, "messages")]
-
-        voice       = voice_dict.get(ss[chat_key(ci, "assistant_name")], "echo")
-        chatbot_avi = avatar_dict.get(ss[chat_key(ci, "assistant_name")], "🤖")
-
-        # Model/assistant info bar
+        # ── Active tab content ──────────────────────────────────────────────
+        # Info bar
         info_col1, info_col2, info_col3 = st.columns([3, 2, 2])
         with info_col1:
             st.markdown(f"**Model:** `{model}`")
         with info_col2:
             st.markdown(f"**Assistant:** `{ss[chat_key(ci, 'assistant_name')]}`")
         with info_col3:
-            # Editable chat title
             new_title = st.text_input("Chat name", value=ss[chat_key(ci, "title")],
                                        key=f"title_input_{ci}", label_visibility="collapsed")
             ss[chat_key(ci, "title")] = new_title
@@ -739,160 +757,161 @@ for tab_i, tab in enumerate(tabs):
                 st.info("ℹ️ **Quick Commands**: `+message` add without reply · `++instruction` system prompt · `.` undo · `-` clear")
                 ss[f"hint_{ci}"] = True
 
-        # Display chat
+        # Display chat history
+        messages = ss[chat_key(ci, "messages")]
         for msg in messages:
             if msg['role'] != 'system':
                 if not isinstance(msg["content"], list):
                     avatar = user_avi if msg["role"] == 'user' else chatbot_avi
                     st.chat_message(msg["role"], avatar=avatar).write(msg["content"])
 
-        # Chat input
-        prompt = st.chat_input("Type your message… (@ to clear, + to add without reply)", key=f"chat_input_{ci}")
+# ── Handle prompt (outside tabs, anchored to bottom) ──────────────────────────
+if prompt:
+    messages = ss[chat_key(ci, "messages")]
 
-        if prompt:
-            if prompt in ["-", "@"]:
-                ass_c = assistants[ss[chat_key(ci, "assistant_name")]] + features['reply_style'][ss[chat_key(ci, "format_name")]]
-                ss[chat_key(ci, "messages")] = [{"role": "system", "content": ass_c}]
-                st.balloons()
-                time.sleep(0.5)
-                st.rerun()
+    if prompt in ["-", "@"]:
+        ass_c = assistants[ss[chat_key(ci, "assistant_name")]] + features['reply_style'][ss[chat_key(ci, "format_name")]]
+        ss[chat_key(ci, "messages")] = [{"role": "system", "content": ass_c}]
+        st.balloons()
+        time.sleep(0.5)
+        st.rerun()
 
-            elif prompt.startswith("+"):
-                prompt = prompt[1:]
-                role = "user"
-                if prompt.startswith("+"):
-                    prompt = prompt[1:]
-                    role = "system"
-                if role == "system":
-                    ss[chat_key(ci, "sys_addings")].append(prompt)
-                    st.success("✅ System instruction added!")
-                    time.sleep(0.8)
-                    st.rerun()
+    elif prompt.startswith("+"):
+        prompt = prompt[1:]
+        role = "user"
+        if prompt.startswith("+"):
+            prompt = prompt[1:]
+            role = "system"
+        if role == "system":
+            ss[chat_key(ci, "sys_addings")].append(prompt)
+            st.success("✅ System instruction added!")
+            time.sleep(0.8)
+            st.rerun()
+        else:
+            ss[chat_key(ci, "messages")].append({"role": role, "content": prompt})
+            st.chat_message(role, avatar=user_avi).write(prompt)
+            st.info("📝 Message added without AI response")
+
+    elif prompt in [".", "undo", "back"]:
+        if len(messages) > 1:
+            remove_last_non_system(ss[chat_key(ci, "messages")])
+            st.success("↩️ Last message removed")
+            time.sleep(0.7)
+            st.rerun()
+        else:
+            st.warning("⚠️ Nothing to remove")
+
+    else:
+        if not ss.openai_api_key and not ss.groq_api_key and not ss.anthropic_api_key:
+            st.info("Please add an API key in the sidebar.")
+            st.stop()
+
+        # Handle image upload
+        image_path = None
+        if uploaded_image:
+            print('<Encoding Image...>')
+            base64_image = encode_ioimage(uploaded_image)
+            image_path = f"data:image/jpeg;base64,{base64_image}"
+            image_add = {"role": 'user',
+                         "content": [{"type": "image_url", "image_url": {"url": image_path}}]}
+            if image_add not in ss[chat_key(ci, "messages")]:
+                ss[chat_key(ci, "messages")].append(image_add)
+
+        client = select_client(model)
+
+        # Add user message
+        ss[chat_key(ci, "messages")].append({"role": "user", "content": prompt})
+        st.chat_message('user', avatar=user_avi).write(prompt)
+
+        # Build thread (strip internal markers)
+        chat_thread = []
+        for msg in ss[chat_key(ci, "messages")]:
+            if isinstance(msg["content"], list):
+                chat_thread.append(msg)
+            elif not str(msg["content"]).startswith('<<'):
+                chat_thread.append(msg)
+
+        # Generate reply
+        try:
+            if use_smol_agents:
+                from utils import smol_agents, smol_research_task, smol_code_task, smol_web_search
+                q = prompt.lower()
+                web_kw  = ['search','find','research','current','latest','news','what is','who is']
+                code_kw = ['code','python','script','function','algorithm','calculate','plot','graph']
+                res_kw  = ['analyze','compare','study','report','summary','comprehensive']
+                if any(k in q for k in code_kw):
+                    st.info("🐍 Code Agent...")
+                    reply = smol_code_task(prompt, model)
+                elif any(k in q for k in res_kw):
+                    st.info("🔬 Research Agent...")
+                    reply = smol_research_task(prompt, model)
+                elif any(k in q for k in web_kw):
+                    st.info("🔍 Web Search Agent...")
+                    reply = smol_web_search(prompt, model)
                 else:
-                    ss[chat_key(ci, "messages")].append({"role": role, "content": prompt})
-                    st.chat_message(role, avatar=user_avi).write(prompt)
-                    st.info("📝 Message added without AI response")
-
-            elif prompt in [".", "undo", "back"]:
-                if len(messages) > 1:
-                    remove_last_non_system(ss[chat_key(ci, "messages")])
-                    st.success("↩️ Last message removed")
-                    time.sleep(0.7)
-                    st.rerun()
-                else:
-                    st.warning("⚠️ Nothing to remove")
-
+                    st.info("🤖 Multi-Tool Agent...")
+                    reply = smol_agents(prompt, model)
+                reply = f"🤖 **Agent Response**\n\n{reply}\n\n---\n*Autonomous AI agent.*"
             else:
-                if not ss.openai_api_key and not ss.groq_api_key and not ss.anthropic_api_key:
-                    st.info("Please add an API key in the sidebar.")
-                    st.stop()
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=chat_thread,
+                    max_tokens=get_max_tokens(model),
+                    stream=False,
+                )
+                reply = response.choices[0].message.content
 
-                # Handle image upload
-                image_path = None
-                if uploaded_image:
-                    print('<Encoding Image...>')
-                    base64_image = encode_ioimage(uploaded_image)
-                    image_path = f"data:image/jpeg;base64,{base64_image}"
-                    image_add = {"role": 'user',
-                                 "content": [{"type": "image_url", "image_url": {"url": image_path}}]}
-                    if image_add not in ss[chat_key(ci, "messages")]:
-                        ss[chat_key(ci, "messages")].append(image_add)
+        except Exception as e:
+            st.error(f"❌ Error: {str(e)}")
+            st.info("💡 Check your API key for the selected provider/model.")
+            st.stop()
 
-                client = select_client(model)
+        reply, chain_of_thoughts = strip_think_tag(reply)
+        if len(chain_of_thoughts) > 3:
+            with st.expander("🧠 Chain of Thoughts", expanded=False):
+                st.write(chain_of_thoughts)
 
-                # Add user message
-                ss[chat_key(ci, "messages")].append({"role": "user", "content": prompt})
-                st.chat_message('user', avatar=user_avi).write(prompt)
+        ss[chat_key(ci, "reply")] = reply
 
-                # Build thread (strip internal markers)
-                chat_thread = []
-                for msg in ss[chat_key(ci, "messages")]:
-                    if isinstance(msg["content"], list):
-                        chat_thread.append(msg)
-                    elif not str(msg["content"]).startswith('<<'):
-                        chat_thread.append(msg)
+        # Remove image from context after use
+        if uploaded_image:
+            ss[chat_key(ci, "messages")] = [
+                m for m in ss[chat_key(ci, "messages")]
+                if not (isinstance(m.get("content"), list)
+                        and any(p.get("type") == "image_url" for p in m["content"]))
+            ]
 
-                # Generate reply
-                try:
-                    if use_smol_agents:
-                        from utils import smol_agents, smol_research_task, smol_code_task, smol_web_search
-                        q = prompt.lower()
-                        web_kw  = ['search','find','research','current','latest','news','what is','who is']
-                        code_kw = ['code','python','script','function','algorithm','calculate','plot','graph']
-                        res_kw  = ['analyze','compare','study','report','summary','comprehensive']
-                        if any(k in q for k in code_kw):
-                            st.info("🐍 Code Agent...")
-                            reply = smol_code_task(prompt, model)
-                        elif any(k in q for k in res_kw):
-                            st.info("🔬 Research Agent...")
-                            reply = smol_research_task(prompt, model)
-                        elif any(k in q for k in web_kw):
-                            st.info("🔍 Web Search Agent...")
-                            reply = smol_web_search(prompt, model)
-                        else:
-                            st.info("🤖 Multi-Tool Agent...")
-                            reply = smol_agents(prompt, model)
-                        reply = f"🤖 **Agent Response**\n\n{reply}\n\n---\n*Autonomous AI agent.*"
-                    else:
-                        response = client.chat.completions.create(
-                            model=model,
-                            messages=chat_thread,
-                            max_tokens=get_max_tokens(model),
-                            stream=False,
-                        )
-                        reply = response.choices[0].message.content
+        ss[chat_key(ci, "messages")].append({"role": "assistant", "content": reply})
+        st.chat_message('assistant', avatar=chatbot_avi).write(reply)
 
-                except Exception as e:
-                    st.error(f"❌ Error: {str(e)}")
-                    st.info("💡 Check your API key for the selected provider/model.")
-                    st.stop()
+        if check_copy_paste() and copy_reply_:
+            pc.copy(ss[chat_key(ci, "reply")])
 
-                reply, chain_of_thoughts = strip_think_tag(reply)
-                if len(chain_of_thoughts) > 3:
-                    with st.expander("🧠 Chain of Thoughts", expanded=False):
-                        st.write(chain_of_thoughts)
+        if save_log:
+            update_log(ss[chat_key(ci, "messages")][-2])
+            update_log(ss[chat_key(ci, "messages")][-1])
 
-                ss[chat_key(ci, "reply")] = reply
+        if translate_in != 'none':
+            language = translate_in
+            reply_language = rileva_lingua(reply)
+            if reply_language == 'Japanese':
+                translator = create_jap_translator(language)
+            elif 'Chinese' in reply_language.split(" "):
+                translator = create_chinese_translator(language)
+            else:
+                translator = create_translator(language)
+            resp_t = client.chat.completions.create(
+                model=model,
+                messages=[{"role": "system", "content": translator},
+                          {"role": "user", "content": reply}]
+            )
+            translation = "<<" + resp_t.choices[0].message.content + ">>"
+            ss[chat_key(ci, "messages")].append({"role": "assistant", "content": translation})
+            st.chat_message('assistant').write(translation)
 
-                # Remove image from context after use
-                if uploaded_image:
-                    ss[chat_key(ci, "messages")] = [
-                        m for m in ss[chat_key(ci, "messages")]
-                        if not (isinstance(m.get("content"), list)
-                                and any(p.get("type") == "image_url" for p in m["content"]))
-                    ]
+        if play_audio_:
+            Text2Speech(reply, voice=voice)
 
-                ss[chat_key(ci, "messages")].append({"role": "assistant", "content": reply})
-                st.chat_message('assistant', avatar=chatbot_avi).write(reply)
-
-                if check_copy_paste() and copy_reply_:
-                    pc.copy(ss[chat_key(ci, "reply")])
-
-                if save_log:
-                    update_log(ss[chat_key(ci, "messages")][-2])
-                    update_log(ss[chat_key(ci, "messages")][-1])
-
-                if translate_in != 'none':
-                    language = translate_in
-                    reply_language = rileva_lingua(reply)
-                    if reply_language == 'Japanese':
-                        translator = create_jap_translator(language)
-                    elif 'Chinese' in reply_language.split(" "):
-                        translator = create_chinese_translator(language)
-                    else:
-                        translator = create_translator(language)
-                    resp_t = client.chat.completions.create(
-                        model=model,
-                        messages=[{"role": "system", "content": translator},
-                                  {"role": "user", "content": reply}]
-                    )
-                    translation = "<<" + resp_t.choices[0].message.content + ">>"
-                    ss[chat_key(ci, "messages")].append({"role": "assistant", "content": translation})
-                    st.chat_message('assistant').write(translation)
-
-                if play_audio_:
-                    Text2Speech(reply, voice=voice)
-
-                if run_code:
-                    from ExecuteCode import ExecuteCode
-                    ExecuteCode(reply)
+        if run_code:
+            from ExecuteCode import ExecuteCode
+            ExecuteCode(reply)
