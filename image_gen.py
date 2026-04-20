@@ -72,9 +72,9 @@ OPENROUTER_IMAGE_MODELS = {
 
 ALIBABA_IMAGE_MODELS = {
     # ── WanX legacy (cheapest, old protocol) ──────────────────────────────────
-    "wanx2.0-t2i-turbo (cheapest)":         "wanx2.0-t2i-turbo",
-    "wanx2.1-t2i-turbo":                    "wanx2.1-t2i-turbo",
-    "wanx2.1-t2i-plus":                     "wanx2.1-t2i-plus",
+    # "wanx2.0-t2i-turbo (cheapest)":         "wanx2.0-t2i-turbo",
+    # "wanx2.1-t2i-turbo":                    "wanx2.1-t2i-turbo",
+    # "wanx2.1-t2i-plus":                     "wanx2.1-t2i-plus",
     # ── Wan 2.2 / 2.5 (old protocol) ─────────────────────────────────────────
     "wan2.2-t2i-flash (fast)":              "wan2.2-t2i-flash",
     "wan2.2-t2i-plus":                      "wan2.2-t2i-plus",

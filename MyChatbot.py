@@ -945,7 +945,7 @@ if prompt:
                 else:
                     st.info("🤖 Multi-Tool Agent...")
                     reply = smol_agents(prompt, model)
-                reply = f"🤖 **Agent Response**\n\n{reply}\n\n---\n*Autonomous AI agent.*"
+                reply = f"🤖 **Agent Response**\n\n{reply}"
             else:
                 response = client.chat.completions.create(
                     model=model,

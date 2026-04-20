@@ -1376,181 +1376,195 @@ authorized_imports = [
             "matplotlib",
             "matplotlib.pyplot",
             "numpy",
-            "pandas"
+            "pandas",
+            "datetime",
+            "json",
+            "re",
+            "math",
+            "statistics",
         ]
 
+# LiteLLM provider prefix mapping: model list -> (api_keys key, litellm prefix)
+_PROVIDER_MAP = [
+    (lambda m: m in gpt_models or any(m.startswith(p) for p in ("gpt-", "o1", "o3", "o4")),
+     "openai",    "openai"),
+    (lambda m: m in deepseek_models or "deepseek" in m,
+     "deepseek",  "deepseek"),
+    (lambda m: m in x_models or "grok" in m,
+     "grok",      "xai"),
+    (lambda m: m in groq_models,
+     "groq",      "groq"),
+    (lambda m: m in anthropic_models or m.startswith("claude"),
+     "anthropic", "anthropic"),
+    (lambda m: m in google_models or m.startswith("gemini"),
+     "googleai",  "gemini"),
+    (lambda m: m in alibaba_models or m.startswith("qwen"),
+     "alibaba",   "openai"),   # Alibaba via LiteLLM uses openai-compatible endpoint
+    (lambda m: m in openrouter_models,
+     "openrouter","openrouter"),
+]
 
-def smol_agents(query, model_name="groq/llama-3.3-70b-versatile", tools=None, stream_outputs=True): 
+
+def _resolve_litellm_model(model_name: str):
+    """
+    Given a bare model name (as stored in session/config), return
+    (litellm_model_name, api_key) ready for LiteLLMModel().
+
+    Strips any existing provider prefix before re-applying the correct one,
+    so double-prefixing (e.g. "groq/groq/...") can never happen.
+    """
+    api_keys = load_api_keys()
+
+    # Strip any existing provider prefix (everything up to the first "/")
+    # but preserve model paths like "meta-llama/llama-4-scout-17b-16e-instruct"
+    known_prefixes = ("openai/", "deepseek/", "xai/", "groq/", "anthropic/",
+                      "gemini/", "openrouter/")
+    bare = model_name
+    for pfx in known_prefixes:
+        if model_name.startswith(pfx):
+            bare = model_name[len(pfx):]
+            break
+
+    for matcher, key_name, litellm_prefix in _PROVIDER_MAP:
+        if matcher(bare):
+            api_key = api_keys.get(key_name, "missing")
+            # Alibaba uses a custom base_url via LiteLLM's openai provider
+            if key_name == "alibaba":
+                # LiteLLM routes Alibaba through the openai provider with a custom base
+                litellm_model = f"openai/{bare}"
+                import os
+                os.environ.setdefault("OPENAI_BASE_URL",
+                    "https://dashscope-intl.aliyuncs.com/compatible-mode/v1")
+            else:
+                litellm_model = f"{litellm_prefix}/{bare}"
+            return litellm_model, api_key
+
+    # Unknown model: pass through as-is and let LiteLLM handle it
+    print(f"[smol_agents] Warning: unknown provider for model '{model_name}', passing through.")
+    return model_name, api_keys.get("openai", "missing")
+
+
+def smol_agents(query, model_name="llama-3.3-70b-versatile", tools=None, stream_outputs=True):
     """
     Execute queries using Smol Agents framework with specified model and tools.
-    
+
     Args:
         query (str): The task/query to execute
-        model_name (str): Model name in LiteLLM format (e.g., "groq/llama-3.3-70b-versatile")
-        tools (list): List of tools to use. If None, defaults to [WebSearchTool()]
-        stream_outputs (bool): Whether to stream outputs
-        max_iterations (int): Maximum iterations for the agent
-        
+        model_name (str): Model name (bare or with provider prefix)
+        tools (list): List of smolagents Tool instances. Defaults to [WebSearchTool(), PythonInterpreterTool()]
+        stream_outputs (bool): Whether to stream agent step outputs to stdout
+
     Returns:
-        str: Agent's response/result
+        str: Agent's final response/result
     """
     try:
         from smolagents import CodeAgent, WebSearchTool, LiteLLMModel, PythonInterpreterTool
-        #from smolagents.tools import DuckDuckGoSearchTool, ImageGenerationTool
-        
-        # Load API keys
-        api_keys = load_api_keys()
-        
-        # Determine the correct API key based on model prefix
-        if model_name.startswith("groq/"):
-            api_key = api_keys.get("groq", "missing")
-            model_name = f"groq/{model_name}"
-        elif model_name.startswith("openai/") or "gpt" in model_name:
-            api_key = api_keys.get("openai", "missing")
-            model_name = f"openai/{model_name}"
-        elif model_name.startswith("deepseek/") or "deepseek" in model_name:
-            api_key = api_keys.get("deepseek", "missing")
-            model_name = f"deepseek/{model_name}"
-        elif model_name.startswith("anthropic/") or "claude" in model_name:
-            api_key = api_keys.get("anthropic", "missing")
-            model_name = f"anthropic/{model_name}"
-        elif model_name.startswith("xai/") or "grok" in model_name:
-            api_key = api_keys.get("grok", "missing")
-            model_name = f"xai/{model_name}"
-        elif model_name.startswith("openrouter/") or "cognitivecomputations/" in model_name:
-            api_key = api_keys.get("openrouter", "missing")
-            model_name = f"openrouter/{model_name}"
-        else:
-            # Default to Groq for unknown models
-            api_key = api_keys.get("groq", "missing")
-            if not model_name.startswith("groq/"):
-                model_name = f"groq/{model_name}"
-        
+
+        litellm_model, api_key = _resolve_litellm_model(model_name)
+
         if api_key == "missing":
-            return "❌ Error: Required API key not found. Please configure your API keys."
-        
-        # Create the model
-        model = LiteLLMModel(model_name, api_key=api_key)
-        
-        # Set default tools if none provided
+            return (
+                f"❌ API key not found for model '{model_name}'. "
+                "Please configure your API keys."
+            )
+
+        model = LiteLLMModel(litellm_model, api_key=api_key)
+
         if tools is None:
-            tools = [
-                WebSearchTool(),
-                PythonInterpreterTool(),
-                # DuckDuckGoSearchTool()
-            ]
+            tools = [WebSearchTool(), PythonInterpreterTool()]
 
-        # Create the agent
         agent = CodeAgent(
-            tools=tools, 
-            model=model, 
+            tools=tools,
+            model=model,
             stream_outputs=stream_outputs,
-            additional_authorized_imports=authorized_imports
+            additional_authorized_imports=authorized_imports,
         )
-        
-        print(f"🤖 Smol Agent initialized with model: {model_name}")
-        print(f"🔧 Available tools: {[tool.__class__.__name__ for tool in tools]}")
-        print(f"📝 Processing query: {query[:100]}{'...' if len(query) > 100 else ''}")
-        
-        # Execute the query
+
+        print(f"🤖 Smol Agent initialized with model: {litellm_model}")
+        print(f"🔧 Tools: {[t.__class__.__name__ for t in tools]}")
+        print(f"📝 Query: {query[:120]}{'...' if len(query) > 120 else ''}")
+
         result = agent.run(query)
-        
-        return f"🎯 **Smol Agent Result:**\n\n{result}"
-        
+        return str(result)
+
     except ImportError as e:
-        return f"❌ Error: Smol Agents not installed. Please install with: pip install smolagents[litellm]\nDetails: {e}"
+        return (
+            f"❌ smolagents not installed. Run: pip install 'smolagents[litellm]'\n"
+            f"Details: {e}"
+        )
     except Exception as e:
-        return f"❌ Error running Smol Agent: {str(e)}"
+        return f"❌ Agent error: {e}"
 
 
-def create_smol_agent_with_tools(model_name="groq/llama-3.3-70b-versatile", include_tools=None):
+def create_smol_agent_with_tools(model_name="llama-3.3-70b-versatile", include_tools=None):
     """
-    Create a Smol Agent with specific tools.
-    
+    Create and return a Smol CodeAgent with specific tools.
+
     Args:
-        model_name (str): Model to use
-        include_tools (list): List of tool names to include
-                             Options: ['web_search', 'python', 'duckduckgo', 'image_generation']
-    
+        model_name (str): Model name (bare or with provider prefix)
+        include_tools (list): Tool names to include: 'web_search', 'python'
+
     Returns:
-        tuple: (agent, tools_list) or (None, error_message)
+        tuple: (agent, tool_names_list) or (None, error_message)
     """
     try:
         from smolagents import CodeAgent, WebSearchTool, LiteLLMModel, PythonInterpreterTool
-        # from smolagents.tools import DuckDuckGoSearchTool, ImageGenerationTool
-        
-        # Load API keys
-        api_keys = load_api_keys()
-        
-        # Determine API key
-        if model_name.startswith("groq/"):
-            api_key = api_keys.get("groq", "missing")
-        elif model_name.startswith("openai/") or "gpt" in model_name:
-            api_key = api_keys.get("openai", "missing")
-        elif model_name.startswith("deepseek/") or "deepseek" in model_name:
-            api_key = api_keys.get("deepseek", "missing")
-        elif model_name.startswith("anthropic/") or "claude" in model_name:
-            api_key = api_keys.get("anthropic", "missing")
-        else:
-            api_key = api_keys.get("groq", "missing")
-            if not model_name.startswith("groq/"):
-                model_name = f"groq/{model_name}"
-        
+
+        litellm_model, api_key = _resolve_litellm_model(model_name)
+
         if api_key == "missing":
-            return None, "❌ Error: Required API key not found."
-        
-        # Create model
-        model = LiteLLMModel(model_name, api_key=api_key)
-        
-        # Tool mapping
+            return None, f"❌ API key not found for model '{model_name}'."
+
+        model = LiteLLMModel(litellm_model, api_key=api_key)
+
         available_tools = {
             'web_search': WebSearchTool(),
-            'python': PythonInterpreterTool(),
-            # 'duckduckgo': DuckDuckGoSearchTool(),
-            # 'image_generation': ImageGenerationTool()
+            'python':     PythonInterpreterTool(),
         }
-        
-        # Select tools
+
         if include_tools is None:
-            tools = [available_tools['web_search'], available_tools['python']]
+            tools = list(available_tools.values())
         else:
-            tools = [available_tools[tool] for tool in include_tools if tool in available_tools]
-        
-        # Create agent
-        agent = CodeAgent(tools=tools, model=model, stream_outputs=True,
-            additional_authorized_imports=authorized_imports)
-        
-        return agent, [tool.__class__.__name__ for tool in tools]
-        
+            tools = [available_tools[t] for t in include_tools if t in available_tools]
+
+        agent = CodeAgent(
+            tools=tools,
+            model=model,
+            stream_outputs=True,
+            additional_authorized_imports=authorized_imports,
+        )
+
+        return agent, [t.__class__.__name__ for t in tools]
+
     except ImportError as e:
-        return None, f"❌ Smol Agents not installed: {e}"
+        return None, f"❌ smolagents not installed: {e}"
     except Exception as e:
         return None, f"❌ Error creating agent: {e}"
 
 
-# Example usage functions
-def smol_web_search(query, model_name="groq/llama-3.3-70b-versatile"):
-    """Execute a web search task using Smol Agents"""
+def smol_web_search(query, model_name="llama-3.3-70b-versatile"):
+    """Execute a web search task using Smol Agents."""
     try:
         from smolagents import WebSearchTool
-        return smol_agents(query, model_name, tools=[WebSearchTool()]) 
+        return smol_agents(query, model_name, tools=[WebSearchTool()])
     except ImportError:
-        return "❌ Error: Smol Agents not installed."
+        return "❌ smolagents not installed."
 
-def smol_code_task(query, model_name="groq/llama-3.3-70b-versatile"):
-    """Execute a coding task using Smol Agents"""
+
+def smol_code_task(query, model_name="llama-3.3-70b-versatile"):
+    """Execute a coding/calculation task using Smol Agents."""
     try:
         from smolagents import PythonInterpreterTool
-        return smol_agents(query, model_name, tools=[PythonInterpreterTool()]) 
+        return smol_agents(query, model_name, tools=[PythonInterpreterTool()])
     except ImportError:
-        return "❌ Error: Smol Agents not installed."
+        return "❌ smolagents not installed."
 
-def smol_research_task(query, model_name="groq/llama-3.3-70b-versatile"):
-    """Execute a research task with web search and analysis"""
+
+def smol_research_task(query, model_name="llama-3.3-70b-versatile"):
+    """Execute a research task with web search and Python analysis."""
     try:
         from smolagents import WebSearchTool, PythonInterpreterTool
-        # from smolagents.tools import DuckDuckGoSearchTool
-        tools = [WebSearchTool(),  PythonInterpreterTool()] # DuckDuckGoSearchTool(),
-        return smol_agents(query, model_name, tools=tools) 
+        tools = [WebSearchTool(), PythonInterpreterTool()]
+        return smol_agents(query, model_name, tools=tools)
     except ImportError:
-        return "❌ Error: Smol Agents not installed."
+        return "❌ smolagents not installed."
