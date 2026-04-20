@@ -311,7 +311,7 @@ def init_chat(i):
     if chat_key(i, "format_name") not in ss:
         ss[chat_key(i, "format_name")] = "base"
     if chat_key(i, "model_name") not in ss:
-        ss[chat_key(i, "model_name")] = "moonshotai/kimi-k2-instruct-0905"
+        ss[chat_key(i, "model_name")] = "meta-llama/llama-4-scout-17b-16e-instruct"
     if chat_key(i, "messages") not in ss:
         ass_name = ss[chat_key(i, "assistant_name")]
         if "assistant" not in ss:

@@ -262,10 +262,12 @@ aiml_models = []
 groq_models = [
     "gemma2-9b-it",
     "llama-3.3-70b-versatile",
+    "openai/gpt-oss-20b",
+    "openai/gpt-oss-120b",
     "deepseek-r1-distill-llama-70b",
-    "meta-llama/llama-4-maverick-17b-128e-instruct",
+    # "meta-llama/llama-4-maverick-17b-128e-instruct",
     "meta-llama/llama-4-scout-17b-16e-instruct",
-    "moonshotai/kimi-k2-instruct-0905",
+    # "moonshotai/kimi-k2-instruct-0905",
     "mistral-saba-24b",
     "qwen-qwq-32b",
 ]
@@ -379,6 +381,8 @@ def get_max_tokens(model):
         return 32000
     elif model in ["moonshotai/kimi-k2-instruct-0905"]:
         return 16300
+    elif model in ["meta-llama/llama-4-scout-17b-16e-instruct","llama-3.1-8b-instant","llama-3.3-70b-versatile", "openai/gpt-oss-120b", "openai/gpt-oss-20b"]:
+        return 65536
     else:
         return 8192
 
